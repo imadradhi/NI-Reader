@@ -22,53 +22,58 @@ jobs:
         run: |
           mkdir -p build/Payload/NIReader.app
           
-          # Attempt xcodebuild
-          brew install xcodegen || true
-          cd ios && xcodegen generate && cd .. || true
+          # Gather all Swift files
+          FILES=(
+            ios/NIReader/App/NIReaderApp.swift
+            ios/NIReader/Models/CardData.swift
+            ios/NIReader/Models/MrzData.swift
+            ios/NIReader/Models/NfcData.swift
+            ios/NIReader/Models/VerificationResult.swift
+            ios/NIReader/Camera/CameraManager.swift
+            ios/NIReader/Camera/CameraPreviewView.swift
+            ios/NIReader/Camera/MrzParser.swift
+            ios/NIReader/NFC/IraqiIdNfcReaderIOS.swift
+            ios/NIReader/Networking/DesktopApiClient.swift
+            ios/NIReader/Utils/Utils.swift
+            ios/NIReader/Verification/CrossDataVerifier.swift
+            ios/NIReader/ViewModels/MainViewModelIOS.swift
+            ios/NIReader/Views/MainView.swift
+            ios/NIReader/Views/VerificationSummaryView.swift
+          )
+          
+          echo "Compiling ${#FILES[@]} Swift source files..."
+          
+          # Compile with Apple swiftc directly
+          xcrun -sdk iphoneos swiftc \
+            -parse-as-library \
+            -module-name NIReader \
+            -target arm64-apple-ios15.0 \
+            -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
+            -framework SwiftUI \
+            -framework AVFoundation \
+            -framework Vision \
+            -framework CoreNFC \
+            -framework CoreMedia \
+            -framework ImageIO \
+            -framework UIKit \
+            -framework Foundation \
+            "${FILES[@]}" \
+            -o build/Payload/NIReader.app/NIReader 2>&1 | tee compile_output.log
 
-          xcodebuild build \
-            -project ios/NIReader.xcodeproj \
-            -scheme NIReader \
-            -destination "generic/platform=iOS" \
-            -configuration Release \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGN_ENTITLEMENTS="" \
-            DEVELOPMENT_TEAM="" || echo "Proceeding to bundle packaging..."
-
-          if [ -d "build/DerivedData/Build/Products/Release-iphoneos/NIReader.app" ]; then
-            echo "Copying xcodebuild output..."
-            cp -r build/DerivedData/Build/Products/Release-iphoneos/NIReader.app/* build/Payload/NIReader.app/
-          fi
-
-          # Ensure binary is compiled and present
+          # Verify if binary was produced
           if [ ! -f "build/Payload/NIReader.app/NIReader" ]; then
-            echo "Compiling NIReader binary directly with swiftc..."
-            SWIFT_FILES=$(find ios/NIReader -name "*.swift")
-            xcrun -sdk iphoneos swiftc \
-              -parse-as-library \
-              -module-name NIReader \
-              -target arm64-apple-ios15.0 \
-              -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
-              -framework SwiftUI \
-              -framework AVFoundation \
-              -framework Vision \
-              -framework CoreNFC \
-              -framework CoreMedia \
-              -framework ImageIO \
-              -framework UIKit \
-              -framework Foundation \
-              $SWIFT_FILES \
-              -o build/Payload/NIReader.app/NIReader
+            echo "❌ Compilation failed. Log contents:"
+            cat compile_output.log
+            exit 1
           fi
+
+          echo "✅ Binary compiled successfully!"
 
           # Ensure Info.plist, Entitlements and PkgInfo exist with exact executable name
           cp ios/NIReader/App/Info.plist build/Payload/NIReader.app/Info.plist
           cp ios/NIReader/App/NIReader.entitlements build/Payload/NIReader.app/ || true
           echo "APPL????" > build/Payload/NIReader.app/PkgInfo
-          chmod 755 build/Payload/NIReader.app/NIReader || true
+          chmod 755 build/Payload/NIReader.app/NIReader
 
           echo "=== Verifying Built Application Package ==="
           ls -la build/Payload/NIReader.app/
