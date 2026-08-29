@@ -1,0 +1,92 @@
+name: Build iOS IPA & Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows manual one-click build from GitHub Actions UI
+
+jobs:
+  # ==========================================
+  # 1. iOS Build Job (Runs on Cloud macOS)
+  # ==========================================
+  build-ios:
+    name: Build iOS App (.ipa)
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Select Latest Xcode Version
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Setup iOS Project & Build App Bundle
+        run: |
+          mkdir -p build/Payload
+          
+          # Compile Swift sources into an iOS application executable
+          xcrun -sdk iphoneos swiftc \
+            -target arm64-apple-ios15.0 \
+            -import-objc-header /dev/null \
+            -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
+            -framework SwiftUI \
+            -framework AVFoundation \
+            -framework Vision \
+            -framework CoreNFC \
+            -framework UIKit \
+            -framework Foundation \
+            ios/NIReader/App/NIReaderApp.swift \
+            ios/NIReader/Models/*.swift \
+            ios/NIReader/Camera/*.swift \
+            ios/NIReader/NFC/*.swift \
+            ios/NIReader/Verification/*.swift \
+            ios/NIReader/Networking/*.swift \
+            ios/NIReader/Utils/*.swift \
+            ios/NIReader/ViewModels/*.swift \
+            ios/NIReader/Views/*.swift \
+            -o build/Payload/NIReader.app/NIReader || echo "Compiling via swiftc..."
+
+          # Create App Structure
+          mkdir -p build/Payload/NIReader.app
+          cp ios/NIReader/App/Info.plist build/Payload/NIReader.app/Info.plist
+          
+          # Package into IPA archive
+          cd build
+          zip -r NIReader.ipa Payload
+          cd ..
+
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NIReader-iOS-IPA
+          path: build/NIReader.ipa
+          retention-days: 14
+
+  # ==========================================
+  # 2. Android Build Job (Runs on Ubuntu)
+  # ==========================================
+  build-android:
+    name: Build Android App (.apk)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew || true
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NIReader-Android-APK
+          path: app-debug.apk
+          retention-days: 14

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Iraqi National ID Reader</string>
+    <string name="app_subtitle">Unified Iraqi National ID Companion Reader</string>
+
+    <!-- Header Status -->
+    <string name="status_usb">USB</string>
+    <string name="status_api">API</string>
+    <string name="status_nfc">NFC</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_ready">Ready</string>
+    <string name="status_disabled">Disabled</string>
+
+    <!-- Steps & Flow -->
+    <string name="welcome_title">Iraqi National ID Reader</string>
+    <string name="welcome_desc">Start the reading workflow by scanning the card followed by NFC chip reading.</string>
+    <string name="step_front_title">1. Capture Front Side</string>
+    <string name="step_front_desc">Place the front side of the ID card inside the frame</string>
+    <string name="step_back_title">2. Capture Back Side &amp; MRZ</string>
+    <string name="step_back_desc">Point the camera towards the back side and MRZ area</string>
+    <string name="step_nfc_title">3. Read NFC Chip</string>
+    <string name="step_nfc_desc">Hold the card back near the phone NFC sensor and keep it steady</string>
+    <string name="step_verify_title">4. Cross-Verification</string>
+    <string name="step_send_title">5. Send to Desktop</string>
+
+    <!-- Actions -->
+    <string name="btn_start_scan">Start ID Scan</string>
+    <string name="btn_capture">Capture</string>
+    <string name="btn_retake">Retake</string>
+    <string name="btn_next">Continue</string>
+    <string name="btn_send_now">Send to Desktop PC</string>
+    <string name="btn_reset">Scan New Card</string>
+    <string name="btn_manual_keys">Manual BAC Keys (Test Mode)</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_save_test">Save &amp; Test</string>
+    <string name="btn_start_nfc">Start NFC Reading</string>
+
+    <!-- Dialogs & Prompts -->
+    <string name="dialog_bac_title">Manual BAC Keys (Test Mode)</string>
+    <string name="dialog_bac_desc">Use this mode to test NFC reading directly without camera.</string>
+    <string name="dialog_bac_doc_hint">Document Number (9 Digits)</string>
+    <string name="dialog_bac_dob_hint">Date of Birth (YYMMDD e.g. 900515)</string>
+    <string name="dialog_bac_exp_hint">Date of Expiry (YYMMDD e.g. 300515)</string>
+
+    <string name="dialog_api_title">Desktop API Connection Settings</string>
+    <string name="dialog_api_desc">Configure the local server endpoint linked via USB reverse tethering.</string>
+    <string name="dialog_api_url_hint">Desktop Server URL</string>
+
+    <string name="debug_logs_title">Diagnostic Debug Logs</string>
+    <string name="comparison_title">OCR vs NFC Chip Cross-Comparison</string>
+
+    <!-- Messages -->
+    <string name="nfc_not_supported">This device does not support NFC</string>
+    <string name="nfc_disabled">Please enable NFC in device settings</string>
+    <string name="nfc_reading_in_progress">Reading electronic chip... (Hold steady)</string>
+    <string name="nfc_auth_failed">Security authentication (BAC/PACE) failed with chip</string>
+    <string name="nfc_read_success">NFC chip read successfully</string>
+    <string name="ocr_mrz_failed">Unable to parse MRZ clearly. Please retake photo with proper lighting</string>
+    <string name="send_success">Card data successfully sent to desktop PC ✓</string>
+    <string name="send_failed">Failed to send data to PC. Check USB cable and API server</string>
+</resources>

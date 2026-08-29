@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand / Primary Colors -->
+    <color name="primary">#0B6E4F</color>
+    <color name="primary_variant">#074D37</color>
+    <color name="primary_light">#E0F2EB</color>
+    <color name="secondary">#D4AF37</color>
+    <color name="secondary_variant">#AA8520</color>
+
+    <!-- Neutral & Backgrounds -->
+    <color name="bg_dark">#0F172A</color>
+    <color name="surface_dark">#1E293B</color>
+    <color name="surface_card">#273549</color>
+    <color name="border_dark">#334155</color>
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_muted">#64748B</color>
+
+    <!-- Status Colors -->
+    <color name="status_connected">#10B981</color>
+    <color name="status_warning">#F59E0B</color>
+    <color name="status_error">#EF4444</color>
+    <color name="status_idle">#64748B</color>
+    
+    <!-- Accent / Scanning -->
+    <color name="scan_laser">#00E5FF</color>
+    <color name="scan_overlay">#B3000000</color>
+    <color name="scan_border">#10B981</color>
+</resources>
