@@ -123,7 +123,7 @@ public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoData
         } else if currentStep == 2 {
             // Back side MRZ detection: 3-line TD1 cues
             let candidateLines = texts.map { MrzParser.sanitizeLine($0) }
-                .filter { $0.count in 25...35 && ($0.contains("<") || $0.starts(with: "I") || $0.contains("IRQ")) }
+                .filter { (25...35).contains($0.count) && ($0.contains("<") || $0.starts(with: "I") || $0.contains("IRQ")) }
             
             if candidateLines.count >= 2 {
                 isDetected = true
