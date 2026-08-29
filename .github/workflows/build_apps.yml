@@ -37,6 +37,7 @@ jobs:
             ios/NIReader/Utils/Utils.swift
             ios/NIReader/Verification/CrossDataVerifier.swift
             ios/NIReader/ViewModels/MainViewModelIOS.swift
+            ios/NIReader/Views/DesignTokens.swift
             ios/NIReader/Views/MainView.swift
             ios/NIReader/Views/VerificationSummaryView.swift
           )
