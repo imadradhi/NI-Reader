@@ -96,7 +96,7 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate {
             p1Parameter: 0x04,
             p2Parameter: 0x0C,
             data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]),
-            expectedResponseBodyLength: -1
+            expectedResponseLength: -1
         ) else {
             session.invalidate(errorMessage: "Failed to construct APDU")
             self.onError?("Failed to construct APDU")
