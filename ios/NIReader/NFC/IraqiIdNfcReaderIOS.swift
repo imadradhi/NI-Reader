@@ -112,7 +112,7 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate, N
         }
         
         // If ISO 7816 session is restricted by sideloading profile, automatically fallback to NDEF reader
-        if nfcError?.code == .readerErrorFeatureNotSupported || nfcError?.code == .readerErrorSecurityViolation {
+        if nfcError?.code == .readerErrorUnsupportedFeature || nfcError?.code == .readerErrorSecurityViolation {
             DispatchQueue.main.async { [weak self] in
                 self?.startNdefFallback()
             }
@@ -129,7 +129,7 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate, N
         
         session.connect(to: tag) { [weak self] error in
             guard let self = self else { return }
-            if let error = error {
+            if error != nil {
                 session.restartPolling()
                 return
             }
