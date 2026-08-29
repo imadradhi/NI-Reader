@@ -30,17 +30,20 @@ jobs:
           xcodebuild build \
             -project ios/NIReader.xcodeproj \
             -scheme NIReader \
-            -destination "generic/platform=iOS" \
+            -sdk iphoneos \
             -configuration Release \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
 
       - name: Package into Standard IPA Archive
         run: |
           mkdir -p build/Payload
           cp -r build/DerivedData/Build/Products/Release-iphoneos/NIReader.app build/Payload/
+          cp ios/NIReader/App/NIReader.entitlements build/Payload/NIReader.app/ || true
           
           echo "=== Verifying Built App Package ==="
           ls -la build/Payload/NIReader.app/
