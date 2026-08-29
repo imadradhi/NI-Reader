@@ -166,13 +166,30 @@ public struct MainView: View {
         }
     }
     
-    // MARK: - Step 2: Camera View with Manual Capture
+    // MARK: - Step 2: Camera View with MRZ Auto-Capture
     private var cameraView: some View {
         ZStack {
             CameraPreviewView(session: viewModel.cameraManager.getCaptureSession())
                 .ignoresSafeArea()
             
             VStack {
+                // Auto Capture Status Badge
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(viewModel.cameraManager.isCardLocked ? Color.green : Color.yellow)
+                        .frame(width: 8, height: 8)
+                    Text(viewModel.cameraManager.isCardLocked ? "MRZ Locked ✓ Auto-Capturing..." : "Auto-Capture: Active")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(Color.black.opacity(0.75))
+                .cornerRadius(20)
+                .padding(.top, 24)
+                
+                Spacer()
+                
                 // Guidance Prompt
                 Text(viewModel.cameraManager.autoCapturePrompt)
                     .font(.system(size: 14, weight: .medium))
@@ -181,19 +198,20 @@ public struct MainView: View {
                     .padding(.vertical, 8)
                     .background(Color.black.opacity(0.75))
                     .cornerRadius(10)
-                    .padding(.top, 24)
+                    .padding(.bottom, 12)
                 
-                Spacer()
-                
-                // Card Bounding Frame Overlay
+                // Glowing Card Bounding Frame Overlay
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.green, lineWidth: 2.5)
-                    .background(Color.green.opacity(0.06))
+                    .stroke(
+                        viewModel.cameraManager.isCardLocked ? Color.green : Color.green.opacity(0.8),
+                        style: StrokeStyle(lineWidth: viewModel.cameraManager.isCardLocked ? 3.5 : 2, dash: viewModel.cameraManager.isCardLocked ? [] : [8, 4])
+                    )
+                    .background(viewModel.cameraManager.isCardLocked ? Color.green.opacity(0.18) : Color.green.opacity(0.05))
                     .frame(width: 320, height: 200)
                 
                 Spacer()
                 
-                // Manual Capture Button
+                // Manual Capture Button (Fallback)
                 Button(action: {
                     viewModel.cameraManager.triggerManualCapture()
                 }) {

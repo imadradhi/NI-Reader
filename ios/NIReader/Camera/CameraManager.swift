@@ -12,7 +12,8 @@ public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoData
     @Published public var autoCapturePrompt: String = "Align card within frame"
     
     public var onPhotoCaptured: ((UIImage) -> Void)?
-    public var currentStep: Int = 1 // 1: Front, 2: Back (MRZ)
+    public var onMrzLinesDetected: (([String]) -> Void)?
+    public var currentStep: Int = 2 // Back side (MRZ) default
     
     private let captureSession = AVCaptureSession()
     private let photoOutput = AVCapturePhotoOutput()
@@ -110,28 +111,30 @@ public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoData
     }
     
     private func evaluateDetectedText(_ texts: [String], now: TimeInterval) {
-        var isDetected = false
+        let candidateLines = texts.map { MrzParser.sanitizeLine($0) }
+            .filter { (25...35).contains($0.count) && ($0.contains("<") || $0.starts(with: "I") || $0.contains("IRQ")) }
         
-        if currentStep == 1 {
-            let fullText = texts.joined(separator: " ").uppercased()
-            let hasKeywords = fullText.contains("IRAQ") || fullText.contains("REPUBLIC") || fullText.contains("CARD") ||
-                              fullText.contains("بطاقة") || fullText.contains("وطنية") || texts.count >= 3
-            if hasKeywords {
-                isDetected = true
-            }
-        } else if currentStep == 2 {
-            let candidateLines = texts.map { MrzParser.sanitizeLine($0) }
-                .filter { (25...35).contains($0.count) && ($0.contains("<") || $0.starts(with: "I") || $0.contains("IRQ")) }
-            
-            if candidateLines.count >= 2 {
-                isDetected = true
-            }
-        }
+        let isDetected = candidateLines.count >= 2
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.isCardLocked = isDetected
-            self.autoCapturePrompt = self.currentStep == 1 ? "Align Front Card and tap Capture button" : "Align Back MRZ and tap Capture button"
+            if isDetected {
+                self.consecutiveDetectionCount += 1
+                self.isCardLocked = true
+                self.autoCapturePrompt = "MRZ Locked ✓ Auto-Capturing..."
+                
+                if self.consecutiveDetectionCount >= 2 && !self.isCapturing {
+                    self.isCapturing = true
+                    self.lastAutoCaptureTime = now
+                    self.triggerHaptic()
+                    self.onMrzLinesDetected?(candidateLines)
+                    self.triggerManualCapture()
+                }
+            } else {
+                self.consecutiveDetectionCount = 0
+                self.isCardLocked = false
+                self.autoCapturePrompt = "Point camera at ID card back (MRZ)"
+            }
         }
     }
     

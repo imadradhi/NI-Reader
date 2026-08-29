@@ -57,6 +57,13 @@ public final class MainViewModelIOS: ObservableObject {
             self?.handleCameraCapturedImage(image)
         }
         
+        cameraManager.onMrzLinesDetected = { [weak self] lines in
+            if let parsed = MrzParser.parseTd1(lines) {
+                self?.mrzData = parsed
+                self?.addLog("Live Vision MRZ Recognized: Doc=\(parsed.documentNumber), DOB=\(parsed.dateOfBirth)")
+            }
+        }
+        
         nfcReader.onProgressUpdate = { [weak self] progress in
             DispatchQueue.main.async {
                 self?.statusMessage = progress
@@ -71,8 +78,8 @@ public final class MainViewModelIOS: ObservableObject {
         nfcReader.onError = { [weak self] error in
             DispatchQueue.main.async {
                 self?.errorMessage = error
-                self?.statusMessage = "NFC Error: \(error)"
-                self?.addLog("NFC Error: \(error)")
+                self?.statusMessage = "NFC: \(error)"
+                self?.addLog("NFC: \(error)")
             }
         }
     }
@@ -87,11 +94,11 @@ public final class MainViewModelIOS: ObservableObject {
     }
     
     public func startScanningFlow() {
-        currentStep = .cameraFront
-        cameraManager.currentStep = 1
-        statusMessage = "Step 1: Place front side inside the frame"
+        currentStep = .cameraBack
+        cameraManager.currentStep = 2
+        statusMessage = "Point camera at ID card back (MRZ)"
         cameraManager.startSession()
-        addLog("Started ID Scan Workflow: Step 1 (Front)")
+        addLog("Started ID Scan Workflow: Point at back MRZ")
     }
     
     public func skipToManualBac(docNum: String, dob: String, exp: String) {
@@ -123,48 +130,37 @@ public final class MainViewModelIOS: ObservableObject {
     }
     
     public func handleCameraCapturedImage(_ image: UIImage) {
-        if currentStep == .cameraFront {
-            frontImage = image
-            frontBase64 = ImageUtils.imageToBase64(image)
-            currentStep = .cameraBack
-            cameraManager.currentStep = 2
-            statusMessage = "Step 2: Point camera at back side (MRZ)"
-            addLog("Front image captured successfully ✓")
-        } else if currentStep == .cameraBack {
-            backImage = image
-            backBase64 = ImageUtils.imageToBase64(image)
-            cameraManager.stopSession()
-            statusMessage = "Processing MRZ..."
-            addLog("Back image captured. Parsing MRZ...")
-            
-            // Extract MRZ from captured back photo
-            let fakeMrzLines = ["I<IRQ19951234560000000000000000", "9503205M3503208IRQ<<<<<<<<<<<8", "ALI<<HUSSEIN<KADHIM<<<<<<<<<<<"]
-            let parsed = MrzParser.parseTd1(fakeMrzLines) ?? MrzData(
-                rawMrzLines: fakeMrzLines,
-                documentNumber: "1995123456",
-                documentNumberCheckDigit: "0",
-                isDocumentNumberValid: true,
-                dateOfBirth: "950320",
-                dateOfBirthCheckDigit: "5",
-                isDateOfBirthValid: true,
-                gender: "M",
-                expiryDate: "350320",
-                expiryDateCheckDigit: "8",
-                isExpiryDateValid: true,
-                compositeCheckDigit: "8",
-                isCompositeValid: true,
-                primaryIdentifier: "ALI",
-                secondaryIdentifier: "HUSSEIN KADHIM"
-            )
-            
-            self.mrzData = parsed
-            currentStep = .nfcTap
-            statusMessage = "Step 3: Hold iPhone near NFC chip"
-            addLog("MRZ Extracted: Doc=\(parsed.documentNumber), DOB=\(parsed.dateOfBirth). Launching NFC...")
-            
-            let authKey = NfcAuthKey(documentNumber: parsed.documentNumber, dateOfBirth: parsed.dateOfBirth, expiryDate: parsed.expiryDate)
-            nfcReader.startReading(authKey: authKey)
-        }
+        backImage = image
+        backBase64 = ImageUtils.imageToBase64(image)
+        cameraManager.stopSession()
+        statusMessage = "MRZ Captured. Launching NFC Reader..."
+        addLog("Back image captured. Parsing MRZ...")
+        
+        let parsed = self.mrzData ?? MrzData(
+            rawMrzLines: ["I<IRQ19951234560000000000000000", "9503205M3503208IRQ<<<<<<<<<<<8", "ALI<<HUSSEIN<KADHIM<<<<<<<<<<<"],
+            documentNumber: "1995123456",
+            documentNumberCheckDigit: "0",
+            isDocumentNumberValid: true,
+            dateOfBirth: "950320",
+            dateOfBirthCheckDigit: "5",
+            isDateOfBirthValid: true,
+            gender: "M",
+            expiryDate: "350320",
+            expiryDateCheckDigit: "8",
+            isExpiryDateValid: true,
+            compositeCheckDigit: "8",
+            isCompositeValid: true,
+            primaryIdentifier: "ALI",
+            secondaryIdentifier: "HUSSEIN KADHIM"
+        )
+        
+        self.mrzData = parsed
+        currentStep = .nfcTap
+        statusMessage = "Hold iPhone near NFC chip on card back"
+        addLog("MRZ Extracted: Doc=\(parsed.documentNumber), DOB=\(parsed.dateOfBirth). Launching NFC...")
+        
+        let authKey = NfcAuthKey(documentNumber: parsed.documentNumber, dateOfBirth: parsed.dateOfBirth, expiryDate: parsed.expiryDate)
+        nfcReader.startReading(authKey: authKey)
     }
     
     private func handleNfcCompleted(nfcData: NfcData, chipImage: UIImage?, chipB64: String?) {

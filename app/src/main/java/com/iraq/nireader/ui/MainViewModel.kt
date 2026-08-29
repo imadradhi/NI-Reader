@@ -106,12 +106,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun startReadingFlow() {
         _uiState.update {
             it.copy(
-                currentStep = AppStep.CAMERA_FRONT,
-                statusMessage = "Step 1: Capture front side photo",
+                currentStep = AppStep.CAMERA_BACK,
+                statusMessage = "Point camera at ID card back (MRZ)",
                 errorMessage = null
             )
         }
-        addDebugLog("Started reading flow: Step 1 FRONT")
+        addDebugLog("Started reading flow: Point camera at back MRZ")
     }
 
     fun skipToNfcDirect(docNum: String, dob: String, expiry: String) {
