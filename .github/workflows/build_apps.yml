@@ -18,40 +18,26 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Build iOS Application Binary & Bundle
+      - name: Build iOS IPA Package
         run: |
-          mkdir -p build/Payload/NIReader.app
-          
-          # Find all Swift source files
-          SWIFT_FILES=$(find ios/NIReader -name "*.swift" | tr '\n' ' ')
-          echo "Compiling Swift files:"
-          echo "$SWIFT_FILES"
-          
-          # Compile with Apple swiftc directly targeting iOS arm64 and display all errors
-          xcrun -sdk iphoneos swiftc \
-            -v \
-            -parse-as-library \
-            -module-name NIReader \
-            -target arm64-apple-ios15.0 \
-            -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
-            -framework SwiftUI \
-            -framework AVFoundation \
-            -framework Vision \
-            -framework CoreNFC \
-            -framework CoreMedia \
-            -framework ImageIO \
-            -framework UIKit \
-            -framework Foundation \
-            $SWIFT_FILES \
-            -o build/Payload/NIReader.app/NIReader
+          brew install xcodegen || true
+          cd ios
+          xcodegen generate
+          cd ..
 
-          # Set executable permissions
-          chmod 755 build/Payload/NIReader.app/NIReader
-          
-          # Copy Info.plist and Entitlements
-          cp ios/NIReader/App/Info.plist build/Payload/NIReader.app/Info.plist
+          xcodebuild archive \
+            -project ios/NIReader.xcodeproj \
+            -scheme NIReader \
+            -destination "generic/platform=iOS" \
+            -archivePath build/NIReader.xcarchive \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+          mkdir -p build/Payload
+          cp -r build/NIReader.xcarchive/Products/Applications/NIReader.app build/Payload/
           cp ios/NIReader/App/NIReader.entitlements build/Payload/NIReader.app/ || true
-          echo "APPL????" > build/Payload/NIReader.app/PkgInfo
 
           echo "=== Verifying Payload Content ==="
           ls -la build/Payload/NIReader.app/
