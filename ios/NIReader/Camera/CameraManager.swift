@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import UIKit
 import Vision
+import CoreMedia
 
 // MARK: - iOS Camera & Real-Time Apple Vision Auto-Capture Manager
 public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCapturePhotoCaptureDelegate {

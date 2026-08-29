@@ -36,6 +36,7 @@ jobs:
             -framework AVFoundation \
             -framework Vision \
             -framework CoreNFC \
+            -framework CoreMedia \
             -framework UIKit \
             -framework Foundation \
             @swift_sources.txt \
