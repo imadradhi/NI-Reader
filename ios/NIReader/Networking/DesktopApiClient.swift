@@ -79,7 +79,7 @@ public final class DesktopApiClient: ObservableObject {
             }
             
             do {
-                let apiResponse = try JSONDecoder().decode(DesktopApiResponse.self, data: data)
+                let apiResponse = try JSONDecoder().decode(DesktopApiResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(apiResponse)) }
             } catch {
                 DispatchQueue.main.async { completion(.failure(error)) }
