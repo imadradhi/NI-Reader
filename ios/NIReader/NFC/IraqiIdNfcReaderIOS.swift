@@ -30,12 +30,12 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate {
     }
     
     public static var isNfcAvailable: Bool {
-        return NFCTagReaderSession.readingAvailable
+        return NFCNDEFReaderSession.readingAvailable || NFCTagReaderSession.readingAvailable
     }
     
     public func startReading(authKey: NfcAuthKey) {
-        guard NFCTagReaderSession.readingAvailable else {
-            onError?("CoreNFC is not supported or disabled on this iPhone.")
+        guard IraqiIdNfcReaderIOS.isNfcAvailable else {
+            onError?("CoreNFC hardware is not available on this iPhone.")
             return
         }
         

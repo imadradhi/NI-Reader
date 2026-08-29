@@ -48,6 +48,9 @@ public struct MainView: View {
         .sheet(isPresented: $showSettingsDialog) {
             ApiSettingsSheet(viewModel: viewModel)
         }
+        .onAppear {
+            viewModel.refreshNfcStatus()
+        }
     }
     
     // MARK: - Header Section

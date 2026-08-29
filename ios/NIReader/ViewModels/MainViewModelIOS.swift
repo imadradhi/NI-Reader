@@ -45,6 +45,11 @@ public final class MainViewModelIOS: ObservableObject {
     public init() {
         setupCallbacks()
         checkHealth()
+        refreshNfcStatus()
+    }
+    
+    public func refreshNfcStatus() {
+        self.isNfcReady = IraqiIdNfcReaderIOS.isNfcAvailable
     }
     
     private func setupCallbacks() {
