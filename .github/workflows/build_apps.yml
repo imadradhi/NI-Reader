@@ -25,21 +25,23 @@ jobs:
           xcodegen generate
           cd ..
 
-          xcodebuild archive \
+          xcodebuild build \
             -project ios/NIReader.xcodeproj \
             -scheme NIReader \
             -destination "generic/platform=iOS" \
-            -archivePath build/NIReader.xcarchive \
-            CODE_SIGN_IDENTITY="-" \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=YES \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES
+            CODE_SIGN_IDENTITY="" \
+            EXPANDED_CODE_SIGN_IDENTITY=""
 
           mkdir -p build/Payload
-          cp -r build/NIReader.xcarchive/Products/Applications/NIReader.app build/Payload/
+          cp -r build/DerivedData/Build/Products/Release-iphoneos/NIReader.app build/Payload/
           cp ios/NIReader/App/NIReader.entitlements build/Payload/NIReader.app/ || true
+          echo "APPL????" > build/Payload/NIReader.app/PkgInfo
 
-          echo "=== Verifying Payload Content ==="
+          echo "=== Verifying Built Application Package ==="
           ls -la build/Payload/NIReader.app/
           
           # Package into IPA archive
