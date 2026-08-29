@@ -22,14 +22,14 @@ jobs:
         run: |
           mkdir -p build/Payload/NIReader.app
           
-          # Find all Swift source files
-          find ios/NIReader -name "*.swift" > swift_sources.txt
-          echo "Compiling Swift source files:"
-          cat swift_sources.txt
+          # Find all Swift source files and pass directly to compiler
+          SWIFT_FILES=$(find ios/NIReader -name "*.swift" | tr '\n' ' ')
+          echo "Compiling Swift files: $SWIFT_FILES"
           
           # Compile with Apple swiftc directly targeting iOS arm64
           xcrun -sdk iphoneos swiftc \
             -parse-as-library \
+            -module-name NIReader \
             -target arm64-apple-ios15.0 \
             -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
             -framework SwiftUI \
@@ -39,7 +39,7 @@ jobs:
             -framework CoreMedia \
             -framework UIKit \
             -framework Foundation \
-            @swift_sources.txt \
+            $SWIFT_FILES \
             -o build/Payload/NIReader.app/NIReader
 
           # Set executable permissions
