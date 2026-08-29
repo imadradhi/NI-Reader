@@ -41,6 +41,7 @@ public final class MainViewModelIOS: ObservableObject {
     private var frontBase64: String? = nil
     private var backBase64: String? = nil
     private var chipFaceBase64: String? = nil
+    private var isNfcScanTriggered = false
     
     public init() {
         setupCallbacks()
@@ -64,19 +65,18 @@ public final class MainViewModelIOS: ObservableObject {
         
         cameraManager.onMrzLinesDetected = { [weak self] lines in
             guard let self = self else { return }
-            // If we are currently scanning camera, immediately parse and launch NFC without waiting
-            if self.currentStep == .cameraBack {
+            DispatchQueue.main.async {
+                guard self.currentStep == .cameraBack, !self.isNfcScanTriggered else { return }
                 if let parsed = MrzParser.parseTd1(lines) {
-                    DispatchQueue.main.async {
-                        self.mrzData = parsed
-                        self.cameraManager.stopSession()
-                        self.currentStep = .nfcTap
-                        self.statusMessage = "Hold iPhone near NFC chip on card back"
-                        self.addLog("MRZ Recognized: Doc=\(parsed.documentNumber), DOB=\(parsed.dateOfBirth). Launching NFC...")
-                        
-                        let authKey = NfcAuthKey(documentNumber: parsed.documentNumber, dateOfBirth: parsed.dateOfBirth, expiryDate: parsed.expiryDate)
-                        self.nfcReader.startReading(authKey: authKey)
-                    }
+                    self.isNfcScanTriggered = true
+                    self.mrzData = parsed
+                    self.cameraManager.stopSession()
+                    self.currentStep = .nfcTap
+                    self.statusMessage = "Hold iPhone near NFC chip on card back"
+                    self.addLog("MRZ Recognized: Doc=\(parsed.documentNumber), DOB=\(parsed.dateOfBirth). Launching NFC...")
+                    
+                    let authKey = NfcAuthKey(documentNumber: parsed.documentNumber, dateOfBirth: parsed.dateOfBirth, expiryDate: parsed.expiryDate)
+                    self.nfcReader.startReading(authKey: authKey)
                 }
             }
         }
@@ -111,6 +111,8 @@ public final class MainViewModelIOS: ObservableObject {
     }
     
     public func startScanningFlow() {
+        isNfcScanTriggered = false
+        nfcReader.invalidate()
         currentStep = .cameraBack
         cameraManager.currentStep = 2
         statusMessage = "Point camera at ID card back (MRZ)"
@@ -247,6 +249,7 @@ public final class MainViewModelIOS: ObservableObject {
     }
     
     public func resetFlow() {
+        isNfcScanTriggered = false
         cameraManager.stopSession()
         nfcReader.invalidate()
         

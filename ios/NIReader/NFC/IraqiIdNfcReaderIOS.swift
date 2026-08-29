@@ -21,6 +21,7 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate, N
     private var tagSession: NFCTagReaderSession?
     private var ndefSession: NFCNDEFReaderSession?
     private var authKey: NfcAuthKey?
+    private var isSessionActive = false
     
     public var onProgressUpdate: ((String) -> Void)?
     public var onReadingCompleted: ((NfcData, UIImage?, String?) -> Void)?
@@ -35,7 +36,15 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate, N
     }
     
     public func startReading(authKey: NfcAuthKey) {
+        guard !isSessionActive else { return }
+        isSessionActive = true
         self.authKey = authKey
+        
+        // Clean up any stale sessions
+        tagSession?.invalidate()
+        tagSession = nil
+        ndefSession?.invalidate()
+        ndefSession = nil
         
         // Attempt starting native ISO 7816 Tag Reader Session first
         tagSession = NFCTagReaderSession(pollingOption: [.iso14443, .iso15693], delegate: self, queue: nil)
@@ -44,12 +53,19 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate, N
     }
     
     public func startNdefFallback() {
+        guard isSessionActive else { return }
+        tagSession?.invalidate()
+        tagSession = nil
+        
         ndefSession = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: false)
         ndefSession?.alertMessage = "Hold iPhone top near card back to read chip."
         ndefSession?.begin()
     }
     
     public func completeWithSimulatedNfc() {
+        isSessionActive = false
+        invalidate()
+        
         let docNum = self.authKey?.documentNumber ?? "1995123456"
         let dob = self.authKey?.dateOfBirth ?? "950320"
         let exp = self.authKey?.expiryDate ?? "350320"
@@ -94,6 +110,7 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate, N
     }
     
     public func invalidate() {
+        isSessionActive = false
         tagSession?.invalidate()
         tagSession = nil
         ndefSession?.invalidate()
@@ -106,14 +123,16 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate, N
     }
     
     public func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
+        isSessionActive = false
         let nfcError = error as? NFCReaderError
         if nfcError?.code == .readerSessionInvalidationErrorUserCanceled {
             return
         }
         
-        // If ISO 7816 session is restricted by sideloading profile, automatically fallback to NDEF reader
+        // If ISO 7816 session is restricted or terminated, try NDEF fallback
         if nfcError?.code == .readerErrorUnsupportedFeature || nfcError?.code == .readerErrorSecurityViolation {
             DispatchQueue.main.async { [weak self] in
+                self?.isSessionActive = true
                 self?.startNdefFallback()
             }
         } else {
