@@ -25,12 +25,11 @@ jobs:
 
       - name: Setup iOS Project & Build App Bundle
         run: |
-          mkdir -p build/Payload
+          mkdir -p build/Payload/NIReader.app
           
           # Compile Swift sources into an iOS application executable
           xcrun -sdk iphoneos swiftc \
             -target arm64-apple-ios15.0 \
-            -import-objc-header /dev/null \
             -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
             -framework SwiftUI \
             -framework AVFoundation \
@@ -47,13 +46,16 @@ jobs:
             ios/NIReader/Utils/*.swift \
             ios/NIReader/ViewModels/*.swift \
             ios/NIReader/Views/*.swift \
-            -o build/Payload/NIReader.app/NIReader || echo "Compiling via swiftc..."
+            -o build/Payload/NIReader.app/NIReader
 
-          # Create App Structure
-          mkdir -p build/Payload/NIReader.app
+          chmod +x build/Payload/NIReader.app/NIReader
           cp ios/NIReader/App/Info.plist build/Payload/NIReader.app/Info.plist
+          echo "APPL????" > build/Payload/NIReader.app/PkgInfo
           
-          # Package into IPA archive
+          echo "=== Verifying App Bundle Content ==="
+          ls -la build/Payload/NIReader.app/
+          
+          # Package into standard IPA archive
           cd build
           zip -r NIReader.ipa Payload
           cd ..

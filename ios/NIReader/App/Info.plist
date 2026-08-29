@@ -7,13 +7,13 @@
     <key>CFBundleDisplayName</key>
     <string>NI Reader</string>
     <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
+    <string>NIReader</string>
     <key>CFBundleIdentifier</key>
     <string>com.iraq.nireader</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
+    <string>NIReader</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
