@@ -3,33 +3,33 @@ import Foundation
 public struct MrzData: Codable, Equatable {
     public let rawMrzLines: [String]
     public let documentNumber: String
-    public let documentNumberCheckDigit: Character
-    public let isDocumentNumberValid: BooleanLiteralType
+    public let documentNumberCheckDigit: String
+    public let isDocumentNumberValid: Bool
     public let dateOfBirth: String
-    public let dateOfBirthCheckDigit: Character
-    public let isDateOfBirthValid: BooleanLiteralType
+    public let dateOfBirthCheckDigit: String
+    public let isDateOfBirthValid: Bool
     public let gender: String
     public let expiryDate: String
-    public let expiryDateCheckDigit: Character
-    public let isExpiryDateValid: BooleanLiteralType
-    public let compositeCheckDigit: Character
-    public let isCompositeValid: BooleanLiteralType
+    public let expiryDateCheckDigit: String
+    public let isExpiryDateValid: Bool
+    public let compositeCheckDigit: String
+    public let isCompositeValid: Bool
     public let primaryIdentifier: String
     public let secondaryIdentifier: String
     
     public init(
         rawMrzLines: [String],
         documentNumber: String,
-        documentNumberCheckDigit: Character,
+        documentNumberCheckDigit: String,
         isDocumentNumberValid: Bool,
         dateOfBirth: String,
-        dateOfBirthCheckDigit: Character,
+        dateOfBirthCheckDigit: String,
         isDateOfBirthValid: Bool,
         gender: String,
         expiryDate: String,
-        expiryDateCheckDigit: Character,
+        expiryDateCheckDigit: String,
         isExpiryDateValid: Bool,
-        compositeCheckDigit: Character,
+        compositeCheckDigit: String,
         isCompositeValid: Bool,
         primaryIdentifier: String,
         secondaryIdentifier: String

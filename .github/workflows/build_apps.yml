@@ -30,13 +30,13 @@ jobs:
           xcodebuild build \
             -project ios/NIReader.xcodeproj \
             -scheme NIReader \
-            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
             -configuration Release \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_ENTITLEMENTS="" \
+            ENTITLEMENTS_REQUIRED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES
 
       - name: Package into Standard IPA Archive
