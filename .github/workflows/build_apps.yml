@@ -22,12 +22,14 @@ jobs:
         run: |
           mkdir -p build/Payload/NIReader.app
           
-          # Find all Swift source files and pass directly to compiler
+          # Find all Swift source files
           SWIFT_FILES=$(find ios/NIReader -name "*.swift" | tr '\n' ' ')
-          echo "Compiling Swift files: $SWIFT_FILES"
+          echo "Compiling Swift files:"
+          echo "$SWIFT_FILES"
           
-          # Compile with Apple swiftc directly targeting iOS arm64
+          # Compile with Apple swiftc directly targeting iOS arm64 and display all errors
           xcrun -sdk iphoneos swiftc \
+            -v \
             -parse-as-library \
             -module-name NIReader \
             -target arm64-apple-ios15.0 \
@@ -37,6 +39,7 @@ jobs:
             -framework Vision \
             -framework CoreNFC \
             -framework CoreMedia \
+            -framework ImageIO \
             -framework UIKit \
             -framework Foundation \
             $SWIFT_FILES \
