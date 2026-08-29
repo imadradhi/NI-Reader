@@ -3,6 +3,7 @@ import AVFoundation
 import UIKit
 import Vision
 import CoreMedia
+import ImageIO
 
 // MARK: - iOS Camera & Real-Time Apple Vision Auto-Capture Manager
 public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCapturePhotoCaptureDelegate {
@@ -104,7 +105,7 @@ public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoData
         request.recognitionLevel = .fast
         request.usesLanguageCorrection = false
         
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right, options: [:])
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: CGImagePropertyOrientation.right, options: [:])
         try? handler.perform([request])
     }
     

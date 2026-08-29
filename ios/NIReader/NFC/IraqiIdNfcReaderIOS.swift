@@ -90,14 +90,18 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate {
         self.onProgressUpdate?("Card Detected. Authenticating BAC...")
         
         // 1. Select eMRTD Applet (AID: A0 00 00 02 47 10 01)
-        let selectAidApdu = NFCISO7816APDU(
+        guard let selectAidApdu = NFCISO7816APDU(
             instructionClass: 0x00,
             instructionCode: 0xA4,
             p1Parameter: 0x04,
             p2Parameter: 0x0C,
             data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]),
             expectedResponseBodyLength: -1
-        )
+        ) else {
+            session.invalidate(errorMessage: "Failed to construct APDU")
+            self.onError?("Failed to construct APDU")
+            return
+        }
         
         iso7816Tag.sendCommand(apdu: selectAidApdu) { [weak self] response, sw1, sw2, error in
             guard let self = self else { return }
