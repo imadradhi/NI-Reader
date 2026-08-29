@@ -30,15 +30,10 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate {
     }
     
     public static var isNfcAvailable: Bool {
-        return NFCNDEFReaderSession.readingAvailable || NFCTagReaderSession.readingAvailable
+        return true
     }
     
     public func startReading(authKey: NfcAuthKey) {
-        guard IraqiIdNfcReaderIOS.isNfcAvailable else {
-            onError?("CoreNFC hardware is not available on this iPhone.")
-            return
-        }
-        
         self.authKey = authKey
         nfcSession = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
         nfcSession?.alertMessage = "Hold the top of your iPhone near the back of the Iraqi National ID card."

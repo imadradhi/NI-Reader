@@ -266,6 +266,7 @@
                 android:orientation="horizontal"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">

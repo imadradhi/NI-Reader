@@ -113,7 +113,6 @@ public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoData
         var isDetected = false
         
         if currentStep == 1 {
-            // Front side detection: Keywords or structured blocks
             let fullText = texts.joined(separator: " ").uppercased()
             let hasKeywords = fullText.contains("IRAQ") || fullText.contains("REPUBLIC") || fullText.contains("CARD") ||
                               fullText.contains("بطاقة") || fullText.contains("وطنية") || texts.count >= 3
@@ -121,7 +120,6 @@ public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoData
                 isDetected = true
             }
         } else if currentStep == 2 {
-            // Back side MRZ detection: 3-line TD1 cues
             let candidateLines = texts.map { MrzParser.sanitizeLine($0) }
                 .filter { (25...35).contains($0.count) && ($0.contains("<") || $0.starts(with: "I") || $0.contains("IRQ")) }
             
@@ -132,22 +130,8 @@ public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoData
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            if isDetected {
-                self.consecutiveDetectionCount += 1
-                self.isCardLocked = true
-                self.autoCapturePrompt = self.currentStep == 1 ? "Front Card Locked ✓" : "MRZ Locked ✓"
-                
-                if self.consecutiveDetectionCount >= 2 && !self.isCapturing {
-                    self.isCapturing = true
-                    self.lastAutoCaptureTime = now
-                    self.triggerHaptic()
-                    self.triggerManualCapture()
-                }
-            } else {
-                self.consecutiveDetectionCount = 0
-                self.isCardLocked = false
-                self.autoCapturePrompt = self.currentStep == 1 ? "Place front side inside frame" : "Point camera at back side (MRZ)"
-            }
+            self.isCardLocked = isDetected
+            self.autoCapturePrompt = self.currentStep == 1 ? "Align Front Card and tap Capture button" : "Align Back MRZ and tap Capture button"
         }
     }
     

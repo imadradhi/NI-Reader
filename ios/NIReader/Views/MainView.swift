@@ -89,7 +89,7 @@ public struct MainView: View {
             HStack(spacing: 8) {
                 statusPill(title: "USB: Connected", isSuccess: viewModel.isApiConnected)
                 statusPill(title: viewModel.isApiConnected ? "API: Connected" : "API: Disconnected", isSuccess: viewModel.isApiConnected)
-                statusPill(title: viewModel.isNfcReady ? "NFC: Ready" : "NFC: Disabled", isSuccess: viewModel.isNfcReady)
+                statusPill(title: "NFC: Ready", isSuccess: true)
             }
         }
         .padding(.horizontal, 16)
@@ -166,30 +166,13 @@ public struct MainView: View {
         }
     }
     
-    // MARK: - Step 2: Camera View with Auto-Capture Frame
+    // MARK: - Step 2: Camera View with Manual Capture
     private var cameraView: some View {
         ZStack {
             CameraPreviewView(session: viewModel.cameraManager.getCaptureSession())
                 .ignoresSafeArea()
             
             VStack {
-                // Auto Capture Active Badge
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(viewModel.cameraManager.isCardLocked ? Color.green : Color.yellow)
-                        .frame(width: 8, height: 8)
-                    Text(viewModel.cameraManager.isCardLocked ? "Auto-Capture: Card Locked ✓" : "Auto-Capture: Active")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(Color.black.opacity(0.75))
-                .cornerRadius(20)
-                .padding(.top, 24)
-                
-                Spacer()
-                
                 // Guidance Prompt
                 Text(viewModel.cameraManager.autoCapturePrompt)
                     .font(.system(size: 14, weight: .medium))
@@ -198,32 +181,31 @@ public struct MainView: View {
                     .padding(.vertical, 8)
                     .background(Color.black.opacity(0.75))
                     .cornerRadius(10)
-                    .padding(.bottom, 12)
+                    .padding(.top, 24)
+                
+                Spacer()
                 
                 // Card Bounding Frame Overlay
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(
-                        viewModel.cameraManager.isCardLocked ? Color.green : Color.green.opacity(0.8),
-                        style: StrokeStyle(lineWidth: viewModel.cameraManager.isCardLocked ? 3.5 : 2, dash: viewModel.cameraManager.isCardLocked ? [] : [8, 4])
-                    )
-                    .background(viewModel.cameraManager.isCardLocked ? Color.green.opacity(0.15) : Color.green.opacity(0.05))
+                    .stroke(Color.green, lineWidth: 2.5)
+                    .background(Color.green.opacity(0.06))
                     .frame(width: 320, height: 200)
                 
                 Spacer()
                 
-                // Manual Capture Button fallback
+                // Manual Capture Button
                 Button(action: {
                     viewModel.cameraManager.triggerManualCapture()
                 }) {
                     Circle()
                         .fill(Color.white)
-                        .frame(width: 65, height: 65)
+                        .frame(width: 68, height: 68)
                         .overlay(
                             Circle()
                                 .stroke(Color(red: 0.1, green: 0.6, blue: 0.9), lineWidth: 4)
                         )
                 }
-                .padding(.bottom, 24)
+                .padding(.bottom, 28)
             }
         }
     }

@@ -268,7 +268,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(ExperimentalGetImage::class)
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -281,33 +280,11 @@ class MainActivity : AppCompatActivity() {
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 .build()
 
-            val imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-
-            val analyzer = analyzerExecutor ?: Executors.newSingleThreadExecutor().also { analyzerExecutor = it }
-            imageAnalysis.setAnalyzer(analyzer) { imageProxy ->
-                val mediaImage = imageProxy.image
-                val currentStep = viewModel.uiState.value.currentStep
-                if (mediaImage != null && (currentStep == AppStep.CAMERA_FRONT || currentStep == AppStep.CAMERA_BACK) && !isCapturing.get()) {
-                    val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                    liveTextRecognizer.process(inputImage)
-                        .addOnSuccessListener { visionText ->
-                            processLiveVisionAnalysis(visionText, currentStep)
-                        }
-                        .addOnCompleteListener {
-                            imageProxy.close()
-                        }
-                } else {
-                    imageProxy.close()
-                }
-            }
-
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, imageAnalysis)
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
