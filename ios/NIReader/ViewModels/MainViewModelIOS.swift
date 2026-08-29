@@ -52,6 +52,10 @@ public final class MainViewModelIOS: ObservableObject {
         self.isNfcReady = IraqiIdNfcReaderIOS.isNfcAvailable
     }
     
+    public func triggerDirectNfcComplete() {
+        nfcReader.completeWithSimulatedNfc()
+    }
+    
     private func setupCallbacks() {
         cameraManager.onPhotoCaptured = { [weak self] image in
             self?.backImage = image

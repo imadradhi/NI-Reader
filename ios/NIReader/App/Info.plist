@@ -23,6 +23,10 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
     
+    <!-- Full-Screen Native Resolution (Eliminate Letterboxing) -->
+    <key>UILaunchScreen</key>
+    <dict/>
+    
     <!-- Camera Permission -->
     <key>NSCameraUsageDescription</key>
     <string>Camera access is required to capture Iraqi National ID card photos and recognize MRZ text automatically.</string>
@@ -51,8 +55,7 @@
     
     <key>UIRequiredDeviceCapabilities</key>
     <array>
-        <string>armv7</string>
-        <string>nfc</string>
+        <string>arm64</string>
     </array>
     <key>UISupportedInterfaceOrientations</key>
     <array>
