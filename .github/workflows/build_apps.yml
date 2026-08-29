@@ -18,44 +18,33 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Select Latest Xcode Version
+      - name: Install XcodeGen & Generate Xcode Project
         run: |
-          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-          xcodebuild -version
+          brew install xcodegen || true
+          cd ios
+          xcodegen generate
+          cd ..
 
-      - name: Setup iOS Project & Build App Bundle
+      - name: Build iOS App with xcodebuild
         run: |
-          mkdir -p build/Payload/NIReader.app
-          
-          # Compile Swift sources into an iOS application executable
-          xcrun -sdk iphoneos swiftc \
-            -target arm64-apple-ios15.0 \
-            -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
-            -framework SwiftUI \
-            -framework AVFoundation \
-            -framework Vision \
-            -framework CoreNFC \
-            -framework UIKit \
-            -framework Foundation \
-            ios/NIReader/App/NIReaderApp.swift \
-            ios/NIReader/Models/*.swift \
-            ios/NIReader/Camera/*.swift \
-            ios/NIReader/NFC/*.swift \
-            ios/NIReader/Verification/*.swift \
-            ios/NIReader/Networking/*.swift \
-            ios/NIReader/Utils/*.swift \
-            ios/NIReader/ViewModels/*.swift \
-            ios/NIReader/Views/*.swift \
-            -o build/Payload/NIReader.app/NIReader
+          xcodebuild build \
+            -project ios/NIReader.xcodeproj \
+            -scheme NIReader \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
 
-          chmod +x build/Payload/NIReader.app/NIReader
-          cp ios/NIReader/App/Info.plist build/Payload/NIReader.app/Info.plist
-          echo "APPL????" > build/Payload/NIReader.app/PkgInfo
+      - name: Package into Standard IPA Archive
+        run: |
+          mkdir -p build/Payload
+          cp -r build/DerivedData/Build/Products/Release-iphoneos/NIReader.app build/Payload/
           
-          echo "=== Verifying App Bundle Content ==="
+          echo "=== Verifying Built App Package ==="
           ls -la build/Payload/NIReader.app/
           
-          # Package into standard IPA archive
           cd build
           zip -r NIReader.ipa Payload
           cd ..

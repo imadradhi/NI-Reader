@@ -1,0 +1,21 @@
+name: NIReader
+options:
+  bundleIdPrefix: com.iraq
+  createIntermediateGroups: true
+targets:
+  NIReader:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: NIReader
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.iraq.nireader
+      PRODUCT_NAME: NIReader
+      INFOPLIST_FILE: NIReader/App/Info.plist
+      CODE_SIGN_ENTITLEMENTS: NIReader/App/NIReader.entitlements
+      CODE_SIGNING_ALLOWED: NO
+      CODE_SIGN_IDENTITY: ""
+      CODE_SIGNING_REQUIRED: NO
+      SWIFT_VERSION: "5.9"
+      ENABLE_BITCODE: NO
