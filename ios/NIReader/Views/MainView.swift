@@ -525,7 +525,7 @@ public struct MainView: View {
                     nfcStepRow(title: "1. قراءة البيانات النصية ورقم الوثيقة (DG1)", isDone: viewModel.nfcData != nil)
                     nfcStepRow(title: "2. قراءة الصورة الشخصية الحيوية (DG2)", isDone: viewModel.chipFaceImage != nil)
                     nfcStepRow(title: "3. قراءة الاسم العربي والتفاصيل (DG11)", isDone: viewModel.nfcData?.dg11Details != nil)
-                    nfcStepRow(title: "4. تدقيق التوقيع الرقمي والأمان (SOD)", isDone: viewModel.verificationReport?.isSodValid == true)
+                    nfcStepRow(title: "4. تدقيق التوقيع الرقمي والأمان (SOD)", isDone: viewModel.nfcData?.sodInfo?.isSignatureValid == true)
                 }
                 .padding(16)
                 .background(Color(red: 0.12, green: 0.14, blue: 0.22).opacity(0.9))
