@@ -557,29 +557,6 @@ public struct MainView: View {
             Spacer()
         }
     }
-            
-            // Direct Complete Action Button (Emergency & Test Fallback)
-            Button(action: {
-                viewModel.triggerDirectNfcComplete()
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.neonEmerald)
-                    Text("Direct NFC Complete & Verify")
-                        .font(.system(size: 13, weight: .bold))
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 46)
-                .background(Color.white.opacity(0.08))
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.15), lineWidth: 1))
-            }
-            .padding(.horizontal, 32)
-            
-            Spacer()
-        }
-    }
     
     // MARK: - Floating Diagnostic Logs Drawer
     private var diagnosticLogsOverlay: some View {
