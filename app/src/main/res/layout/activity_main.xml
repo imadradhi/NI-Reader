@@ -304,16 +304,94 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Card Bounding Box Overlay -->
-            <View
-                android:id="@+id/cardFrameOverlay"
+            <!-- Card Frame Container with MRZ Chevron Guidelines -->
+            <FrameLayout
+                android:id="@+id/cardFrameContainer"
                 android:layout_width="320dp"
                 android:layout_height="200dp"
-                android:background="@drawable/bg_card_frame"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent">
+
+                <!-- Rounded Border Frame -->
+                <View
+                    android:id="@+id/cardFrameOverlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_card_frame" />
+
+                <!-- 3-Row MRZ Chevron Position Guide (Like ReadID Me) -->
+                <LinearLayout
+                    android:id="@+id/layoutMrzChevronGuide"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginHorizontal="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/textMrzLine1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.15"
+                        android:text="^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMrzLine2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:gravity="center"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.15"
+                        android:text="^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMrzLine3"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:gravity="center"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.15"
+                        android:text="^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Document Scanned Green Pill Badge -->
+                <LinearLayout
+                    android:id="@+id/badgeDocumentScanned"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_verdict_pass"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="10dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✓ Document scanned"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/textCameraPrompt"
@@ -326,7 +404,7 @@
                 android:text="ضع ظهر البطاقة داخل الإطار"
                 android:textColor="@color/text_primary"
                 android:textSize="14sp"
-                app:layout_constraintBottom_toTopOf="@id/cardFrameOverlay"
+                app:layout_constraintBottom_toTopOf="@id/cardFrameContainer"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 

@@ -410,8 +410,28 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         triggerHapticFeedback()
                         binding.cardFrameOverlay.setBackgroundResource(R.drawable.bg_card_frame_active)
-                        binding.textAutoCaptureStatus.text = "تم مسح الـ MRZ وتدقيق الأرقام بنجاح ✓"
-                        viewModel.onMrzExtractedDirectly(directMrz)
+                        binding.badgeDocumentScanned.visibility = View.VISIBLE
+
+                        // Highlight green scanned text like ReadID Me
+                        val lines = directMrz.rawMrzLines
+                        if (lines.isNotEmpty()) {
+                            binding.textMrzLine1.text = lines.getOrNull(0) ?: ""
+                            binding.textMrzLine1.setTextColor(ContextCompat.getColor(this, R.color.success))
+                            binding.textMrzLine2.text = lines.getOrNull(1) ?: ""
+                            binding.textMrzLine2.setTextColor(ContextCompat.getColor(this, R.color.success))
+                            if (lines.size > 2) {
+                                binding.textMrzLine3.text = lines[2]
+                                binding.textMrzLine3.setTextColor(ContextCompat.getColor(this, R.color.success))
+                            }
+                        }
+
+                        binding.textAutoCaptureStatus.text = "تم تدقيق الأرقام بنجاح ✓"
+                        
+                        // Transition smoothly after 450ms
+                        binding.root.postDelayed({
+                            binding.badgeDocumentScanned.visibility = View.GONE
+                            viewModel.onMrzExtractedDirectly(directMrz)
+                        }, 450)
                     }
                 }
                 return

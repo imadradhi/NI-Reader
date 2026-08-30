@@ -357,7 +357,7 @@ public struct MainView: View {
                 
                 Spacer()
                 
-                // Holographic Card Bounding HUD
+                // Holographic Card Bounding HUD with ReadID-Style MRZ Chevron Guidelines
                 ZStack {
                     // Frame Background
                     RoundedRectangle(cornerRadius: 16)
@@ -371,14 +371,65 @@ public struct MainView: View {
                     CornerBracketShape(cornerLength: 28, radius: 16)
                         .stroke(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.neonCyan, lineWidth: 3.5)
                     
-                    // Prompt in center
-                    Text(viewModel.cameraManager.autoCapturePrompt)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(8)
+                    // 3-Row MRZ Chevron Position Guide
+                    VStack(spacing: 3) {
+                        Spacer()
+                        
+                        if viewModel.cameraManager.isCardLocked, let mrz = viewModel.mrzData {
+                            Text(mrz.rawMrzLines.indices.contains(0) ? mrz.rawMrzLines[0] : "^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.neonEmerald)
+                                .lineLimit(1)
+                            Text(mrz.rawMrzLines.indices.contains(1) ? mrz.rawMrzLines[1] : "^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.neonEmerald)
+                                .lineLimit(1)
+                            Text(mrz.rawMrzLines.indices.contains(2) ? mrz.rawMrzLines[2] : "^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.neonEmerald)
+                                .lineLimit(1)
+                        } else {
+                            Text("^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.4))
+                                .lineLimit(1)
+                            Text("^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.4))
+                                .lineLimit(1)
+                            Text("^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.4))
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 14)
+                    
+                    // Document Scanned Center Badge
+                    if viewModel.cameraManager.isCardLocked {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.white)
+                            Text("✓ Document scanned")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.neonEmerald)
+                        .cornerRadius(20)
+                        .shadow(color: Color.neonEmerald.opacity(0.5), radius: 10, y: 3)
+                    } else {
+                        // Prompt in center when scanning
+                        Text(viewModel.cameraManager.autoCapturePrompt)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(Color.black.opacity(0.7))
+                            .cornerRadius(8)
+                    }
                 }
                 .frame(width: 320, height: 200)
                 
@@ -404,59 +455,108 @@ public struct MainView: View {
     
     // MARK: - Step 3: Interactive Concentric NFC Sonar View
     private var fullScreenNfcTapView: some View {
-        VStack(spacing: 28) {
+        ScrollView {
+            VStack(spacing: 24) {
+                // Concentric Expanding Sonar Radar Ripples
+                ZStack {
+                    Circle()
+                        .stroke(Color.neonCyan.opacity(0.15), lineWidth: 2)
+                        .frame(width: 200, height: 200)
+                        .scaleEffect(radarPulsing ? 1.2 : 0.8)
+                        .opacity(radarPulsing ? 0.0 : 0.6)
+                    
+                    Circle()
+                        .stroke(Color.neonCyan.opacity(0.3), lineWidth: 2)
+                        .frame(width: 150, height: 150)
+                        .scaleEffect(radarPulsing ? 1.15 : 0.9)
+                        .opacity(radarPulsing ? 0.2 : 0.8)
+                    
+                    Circle()
+                        .fill(LinearGradient(colors: [Color(red: 0.1, green: 0.2, blue: 0.35), Color(red: 0.05, green: 0.1, blue: 0.2)], startPoint: .top, endPoint: .bottom))
+                        .frame(width: 100, height: 100)
+                        .overlay(Circle().stroke(Color.neonCyan, lineWidth: 2))
+                        .shadow(color: Color.neonCyan.opacity(0.4), radius: 20, x: 0, y: 0)
+                    
+                    Image(systemName: "wave.3.forward.circle.fill")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundColor(.neonCyan)
+                }
+                .animation(Animation.easeInOut(duration: 1.6).repeatForever(autoreverses: false), value: radarPulsing)
+                .onAppear { radarPulsing = true }
+                .padding(.top, 20)
+                
+                VStack(spacing: 8) {
+                    Text("ضع أعلى الآيفون على شريحة البطاقة")
+                        .font(.system(size: 19, weight: .black))
+                        .foregroundColor(.white)
+                    Text("ثبت الهاتف على ظهر البطاقة حتى تكتمل كافة خطوات القراءة والتوقيع.")
+                        .font(.system(size: 13))
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+                
+                // Real-time Status Card
+                HStack(spacing: 12) {
+                    ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .neonCyan))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("حالة القراءة:")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.gray)
+                        Text(viewModel.statusMessage)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.neonCyan)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.neonCyan.opacity(0.12))
+                .cornerRadius(12)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neonCyan.opacity(0.3), lineWidth: 1))
+                .padding(.horizontal, 20)
+                
+                // Step-by-Step Data Group Checklist Card
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("مراحل القراءة المشفرة:")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    nfcStepRow(title: "1. قراءة البيانات النصية ورقم الوثيقة (DG1)", isDone: viewModel.nfcData != nil)
+                    nfcStepRow(title: "2. قراءة الصورة الشخصية الحيوية (DG2)", isDone: viewModel.chipFaceImage != nil)
+                    nfcStepRow(title: "3. قراءة الاسم العربي والتفاصيل (DG11)", isDone: viewModel.nfcData?.dg11Details != nil)
+                    nfcStepRow(title: "4. تدقيق التوقيع الرقمي والأمان (SOD)", isDone: viewModel.verificationReport?.isSodValid == true)
+                }
+                .padding(16)
+                .background(Color(red: 0.12, green: 0.14, blue: 0.22).opacity(0.9))
+                .cornerRadius(14)
+                .padding(.horizontal, 20)
+                
+                Button(action: { viewModel.cancelScanning() }) {
+                    Text("إلغاء والعودة للرئيسية")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Color.white.opacity(0.06))
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
+            }
+        }
+    }
+    
+    private func nfcStepRow(title: String, isDone: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: isDone ? "checkmark.circle.fill" : "hourglass.circle")
+                .foregroundColor(isDone ? .neonEmerald : .gray)
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isDone ? .white : .gray)
             Spacer()
-            
-            // Concentric Expanding Sonar Radar Ripples
-            ZStack {
-                Circle()
-                    .stroke(Color.neonCyan.opacity(0.15), lineWidth: 2)
-                    .frame(width: 260, height: 260)
-                    .scaleEffect(radarPulsing ? 1.2 : 0.8)
-                    .opacity(radarPulsing ? 0.0 : 0.6)
-                
-                Circle()
-                    .stroke(Color.neonCyan.opacity(0.3), lineWidth: 2)
-                    .frame(width: 190, height: 190)
-                    .scaleEffect(radarPulsing ? 1.15 : 0.9)
-                    .opacity(radarPulsing ? 0.2 : 0.8)
-                
-                Circle()
-                    .fill(LinearGradient(colors: [Color(red: 0.1, green: 0.2, blue: 0.35), Color(red: 0.05, green: 0.1, blue: 0.2)], startPoint: .top, endPoint: .bottom))
-                    .frame(width: 130, height: 130)
-                    .overlay(Circle().stroke(Color.neonCyan, lineWidth: 2))
-                    .shadow(color: Color.neonCyan.opacity(0.4), radius: 20, x: 0, y: 0)
-                
-                Image(systemName: "wave.3.forward.circle.fill")
-                    .font(.system(size: 64, weight: .light))
-                    .foregroundColor(.neonCyan)
-            }
-            .animation(Animation.easeInOut(duration: 1.6).repeatForever(autoreverses: false), value: radarPulsing)
-            .onAppear { radarPulsing = true }
-            
-            VStack(spacing: 8) {
-                Text("Hold iPhone Near NFC Chip")
-                    .font(.system(size: 22, weight: .black))
-                    .foregroundColor(.white)
-                Text("Keep the top edge of your iPhone steady against the back of the card.")
-                    .font(.system(size: 13))
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-            
-            // Status Banner
-            HStack(spacing: 10) {
-                ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .neonCyan))
-                Text(viewModel.statusMessage)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.neonCyan)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(Color.neonCyan.opacity(0.12))
-            .cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neonCyan.opacity(0.3), lineWidth: 1))
+        }
+    }
             
             // Direct Complete Action Button (Emergency & Test Fallback)
             Button(action: {
