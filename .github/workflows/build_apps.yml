@@ -92,7 +92,7 @@ jobs:
           retention-days: 14
 
   # ==========================================
-  # 2. Android Build Job (Runs on Ubuntu)
+  # 2. Android Build Job (Runs on Cloud Linux)
   # ==========================================
   build-android:
     name: Build Android App (.apk)
@@ -107,12 +107,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew || true
+        run: chmod +x gradlew
+
+      - name: Build Android Debug APK
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: NIReader-Android-APK
-          path: app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14

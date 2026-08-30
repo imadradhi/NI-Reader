@@ -41,7 +41,7 @@ class IraqiIdNfcReader {
         val isoDep = IsoDep.get(tag)
 
         if (isoDep == null) {
-            emit(NfcReadStatus.Error("Tag does not support ISO/IEC 14443-4 (IsoDep) protocol"))
+            emit(NfcReadStatus.Error("الشريحة لا تدعم بروتوكول ISO/IEC 14443-4 (IsoDep)"))
             return@flow
         }
 
@@ -61,7 +61,7 @@ class IraqiIdNfcReader {
             val uidHex = ByteUtils.toHexString(tag.id)
             val historicalBytes = isoDep.historicalBytes ?: isoDep.hiLayerResponse
             val historicalHex = historicalBytes?.let { ByteUtils.toHexString(it) }
-            val cardSummary = "$isoType | UID: $uidHex${if (historicalHex != null) " | ATS/ATTRIB: $historicalHex" else ""}"
+            val cardSummary = "$isoType | UID: $uidHex${if (historicalHex != null) " | ATS: $historicalHex" else ""}"
             
             emit(NfcReadStatus.CardDiscovered(historicalBytes = cardSummary, protocol = isoType))
 
@@ -104,37 +104,53 @@ class IraqiIdNfcReader {
                                 isPaceSucceeded = true
                                 break
                             } catch (e: Exception) {
-                                // Try next PACE or fallback to BAC
+                                // Fallback to BAC
                             }
                         }
                     }
                 }
             } catch (e: Exception) {
-                // CardAccess not present or not readable, fallback to standard BAC
+                // CardAccess not present, fallback to BAC
             }
-
 
             // 2. Perform BAC if PACE was not executed or failed
             if (!isPaceSucceeded) {
                 emit(NfcReadStatus.Authenticating("BAC"))
                 val bacKey = authKey.toBacKeySpec()
-                passportService.sendSelectApplet(false)
-                passportService.doBAC(bacKey)
-                authProtocol = "BAC"
+                try {
+                    passportService.sendSelectApplet(false)
+                    passportService.doBAC(bacKey)
+                    authProtocol = "BAC"
+                } catch (e: Exception) {
+                    val msg = e.message.orEmpty()
+                    val isAuthFail = msg.contains("6982") || msg.contains("6300") || msg.contains("BAC") || msg.contains("Security")
+                    emit(
+                        NfcReadStatus.Error(
+                            message = if (isAuthFail) {
+                                "فشلت المصادقة الأمنية (BAC)! يرجى التحقق من أرقام الـ MRZ المدخلة والمحاولة مرة أخرى."
+                            } else {
+                                "خطأ أثناء مصادقة BAC: ${e.localizedMessage}"
+                            },
+                            isAuthFailure = isAuthFail,
+                            failurePhase = "BAC_AUTH",
+                            throwable = e
+                        )
+                    )
+                    return@flow
+                }
             }
 
             // 3. Read Data Groups (DG1, DG2, DG11, DG13, SOD)
-            val totalDgs = 5
-            var currentStep = 1
+            val totalDgs = 4
 
-            // DG1 - MRZ Info
-            emit(NfcReadStatus.ReadingDataGroup("DG1 (MRZ Data)", currentStep++, totalDgs))
+            // DG1 - MRZ Info (25%)
+            emit(NfcReadStatus.ReadingDataGroup("DG1 (البيانات النصية)", 1, totalDgs, 25, "قراءة بيانات الهوية ورقم الوثيقة..."))
             val dg1In: InputStream = passportService.getInputStream(PassportService.EF_DG1)
             val dg1File = DG1File(dg1In)
             val dg1Mrz = NfcDataGroupParser.parseDg1(dg1File)
 
-            // DG2 - Facial Biometric Image
-            emit(NfcReadStatus.ReadingDataGroup("DG2 (Biometric Face Photo)", currentStep++, totalDgs))
+            // DG2 - Facial Biometric Image (60%)
+            emit(NfcReadStatus.ReadingDataGroup("DG2 (الصورة الحيوية للوجه)", 2, totalDgs, 60, "قراءة الصورة الشخصية من الشريحة..."))
             var faceBitmap: Bitmap? = null
             var faceBase64: String? = null
             var dg2Present = false
@@ -149,30 +165,28 @@ class IraqiIdNfcReader {
                 // DG2 read error or protected
             }
 
-            // DG11 - Personal details (Optional)
-            emit(NfcReadStatus.ReadingDataGroup("DG11 (Personal Details)", currentStep++, totalDgs))
+            // DG11 - Personal details (80%)
+            emit(NfcReadStatus.ReadingDataGroup("DG11 (التفاصيل الإضافية)", 3, totalDgs, 80, "قراءة الاسم العربي والتفاصيل الشخصية..."))
             var dg11Details = com.iraq.nireader.data.model.Dg11PersonalDetails()
             try {
                 val dg11In: InputStream = passportService.getInputStream(PassportService.EF_DG11)
                 val dg11File = DG11File(dg11In)
                 dg11Details = NfcDataGroupParser.parseDg11(dg11File)
             } catch (e: Exception) {
-                // Optional DG11 may not exist on some card profiles
+                // DG11 not present
             }
 
             // DG13 - Optional National Security Fields
-            emit(NfcReadStatus.ReadingDataGroup("DG13 (National Security Data)", currentStep++, totalDgs))
             val dg13Map = mutableMapOf<String, String>()
             try {
                 val dg13In: InputStream = passportService.getInputStream(PassportService.EF_DG13)
-                // DG13 format can be country specific ASN.1/TLV
                 dg13Map["status"] = "Present"
             } catch (e: Exception) {
-                // DG13 not present or requires EAC
+                // DG13 optional
             }
 
-            // SOD - Security Object File (Document Signatures)
-            emit(NfcReadStatus.ReadingDataGroup("SOD (Document Security Object)", currentStep++, totalDgs))
+            // SOD - Security Object File (100%)
+            emit(NfcReadStatus.ReadingDataGroup("SOD (التواقيع والأمان الرقمي)", 4, totalDgs, 95, "التحقق من التوقيع الرقمي للوثيقة..."))
             var sodInfo = com.iraq.nireader.data.model.SodSecurityInfo()
             try {
                 val sodIn: InputStream = passportService.getInputStream(PassportService.EF_SOD)
@@ -197,9 +211,15 @@ class IraqiIdNfcReader {
             emit(NfcReadStatus.Success(nfcData, faceBitmap, faceBase64))
 
         } catch (e: Exception) {
+            val isTagLost = e is java.io.IOException || e is android.nfc.TagLostException || e.message?.contains("Tag was lost") == true
             emit(
                 NfcReadStatus.Error(
-                    message = e.localizedMessage ?: "Error during NFC reading",
+                    message = if (isTagLost) {
+                        "انقطع الاتصال بالشريحة! يرجى تثبيت البطاقة خلف الهاتف وإعادة المحاولة."
+                    } else {
+                        "خطأ في قراءة NFC: ${e.localizedMessage ?: e.javaClass.simpleName}"
+                    },
+                    isCardLost = isTagLost,
                     throwable = e
                 )
             )

@@ -22,6 +22,7 @@ enum class AppStep {
     IDLE,
     CAMERA_FRONT,
     CAMERA_BACK,
+    MRZ_CONFIRMATION,
     NFC_TAP,
     VERIFICATION,
     SENDING,
@@ -35,7 +36,10 @@ data class UiState(
     val apiConnected: Boolean = false,
     val nfcReady: Boolean = false,
     val nfcReadingStatusText: String = "",
-    val statusMessage: String = "Ready to scan National ID card",
+    val nfcProgressPercentage: Int = 0,
+    val nfcStepDetail: String = "",
+    val isNfcChipConnected: Boolean = false,
+    val statusMessage: String = "جاهز لقراءة البطاقة الوطنية العراقية",
     val frontBitmap: Bitmap? = null,
     val backBitmap: Bitmap? = null,
     val chipFaceBitmap: Bitmap? = null,
@@ -107,11 +111,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 currentStep = AppStep.CAMERA_BACK,
-                statusMessage = "Point camera at ID card back (MRZ)",
+                statusMessage = "وجه الكاميرا نحو خلفية البطاقة (منطقة الـ MRZ)",
                 errorMessage = null
             )
         }
         addDebugLog("Started reading flow: Point camera at back MRZ")
+    }
+
+    fun cancelScanning() {
+        _uiState.update {
+            it.copy(
+                currentStep = AppStep.IDLE,
+                statusMessage = "جاهز لقراءة البطاقة الوطنية العراقية",
+                errorMessage = null,
+                isNfcChipConnected = false,
+                nfcProgressPercentage = 0,
+                nfcStepDetail = ""
+            )
+        }
+        addDebugLog("Scanning cancelled by user. Returned to IDLE.")
+    }
+
+    fun proceedToNfc() {
+        _uiState.update {
+            it.copy(
+                currentStep = AppStep.NFC_TAP,
+                isNfcChipConnected = false,
+                nfcProgressPercentage = 0,
+                nfcStepDetail = "ضع ظهر البطاقة ملامساً لحساس الـ NFC خلف الهاتف",
+                statusMessage = "ضع البطاقة خلف الهاتف لقراءة الشريحة الإلكترونية"
+            )
+        }
+        addDebugLog("Proceeding from MRZ Confirmation to NFC Tap.")
+    }
+
+    fun rescanMrz() {
+        _uiState.update {
+            it.copy(
+                currentStep = AppStep.CAMERA_BACK,
+                mrzData = null,
+                statusMessage = "أعد توجيه الكاميرا نحو الـ MRZ في ظهر البطاقة",
+                errorMessage = null
+            )
+        }
+        addDebugLog("Rescan MRZ requested by user.")
     }
 
     fun skipToNfcDirect(docNum: String, dob: String, expiry: String) {
@@ -137,7 +180,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 mrzData = mrz,
                 currentStep = AppStep.NFC_TAP,
-                statusMessage = "Hold card near the NFC sensor on phone back"
+                isNfcChipConnected = false,
+                nfcProgressPercentage = 0,
+                nfcStepDetail = "ضع ظهر البطاقة ملامساً لحساس الـ NFC",
+                statusMessage = "ضع البطاقة بالقرب من حساس الـ NFC خلف الهاتف"
             )
         }
         addDebugLog("Manual BAC key configured. Ready for NFC Tap: Doc=$docNum, DOB=$dob, Exp=$expiry")
@@ -149,7 +195,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 frontBitmap = bitmap,
                 currentStep = AppStep.CAMERA_BACK,
-                statusMessage = "Step 2: Point camera at back side (MRZ)"
+                statusMessage = "الخطوة 2: وجه الكاميرا نحو ظهر البطاقة (منطقة الـ MRZ)"
             )
         }
         addDebugLog("Front image captured successfully")
@@ -160,7 +206,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 backBitmap = bitmap,
-                statusMessage = "Reading and analyzing MRZ with OCR..."
+                statusMessage = "جاري قراءة وتدقيق أرقام الـ MRZ..."
             )
         }
         addDebugLog("Back image captured. Processing OCR...")
@@ -172,16 +218,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update {
                     it.copy(
                         mrzData = mrz,
-                        currentStep = AppStep.NFC_TAP,
-                        statusMessage = "Step 3: Hold card near the NFC sensor on phone back"
+                        currentStep = AppStep.MRZ_CONFIRMATION,
+                        statusMessage = "تمت قراءة وتدقيق الـ MRZ بنجاح ✓"
                     )
                 }
             }.onFailure { error ->
                 addDebugLog("MRZ OCR Failed: ${error.message}")
                 _uiState.update {
                     it.copy(
-                        statusMessage = "Unable to read MRZ automatically. Retake photo or enter keys manually.",
-                        errorMessage = "MRZ OCR Error: ${error.message}"
+                        statusMessage = "تعذر قراءة الـ MRZ بوضوح. يرجى إعادة التقاط الصورة بإضاءة أفضل.",
+                        errorMessage = "خطأ في قراءة الـ MRZ: ${error.message}"
                     )
                 }
             }
@@ -190,14 +236,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onNfcTagDiscovered(tag: Tag) {
         val currentStep = _uiState.value.currentStep
-        if (currentStep != AppStep.NFC_TAP && currentStep != AppStep.IDLE) return
+        if (currentStep != AppStep.NFC_TAP && currentStep != AppStep.MRZ_CONFIRMATION && currentStep != AppStep.IDLE) return
 
         val mrz = _uiState.value.mrzData
         if (mrz == null) {
             _uiState.update {
                 it.copy(
-                    errorMessage = "Please scan MRZ or enter BAC keys before NFC reading",
-                    statusMessage = "BAC keys unavailable"
+                    errorMessage = "يرجى مسح الـ MRZ أولاً أو إدخال مفاتيح BAC قبل قراءة الـ NFC",
+                    statusMessage = "مفاتيح المصادقة غير متوفرة"
                 )
             }
             return
@@ -210,34 +256,60 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             nfcReader.readCard(tag, authKey).collect { status ->
                 when (status) {
                     is NfcReadStatus.CardDiscovered -> {
-                        _uiState.update { it.copy(nfcReadingStatusText = "Card discovered (${status.historicalBytes ?: "ISO-DEP"})") }
+                        _uiState.update {
+                            it.copy(
+                                isNfcChipConnected = true,
+                                nfcProgressPercentage = 10,
+                                nfcStepDetail = status.message,
+                                nfcReadingStatusText = "تم العثور على الشريحة (${status.protocol})"
+                            )
+                        }
                         addDebugLog("NFC Tag connected: ${status.historicalBytes}")
                     }
                     is NfcReadStatus.Authenticating -> {
-                        _uiState.update { it.copy(nfcReadingStatusText = "Authenticating session (${status.protocol})...") }
+                        _uiState.update {
+                            it.copy(
+                                isNfcChipConnected = true,
+                                nfcProgressPercentage = 20,
+                                nfcStepDetail = status.message,
+                                nfcReadingStatusText = "جاري المصادقة الأمنية (${status.protocol})..."
+                            )
+                        }
                         addDebugLog("Authenticating via ${status.protocol}")
                     }
                     is NfcReadStatus.ReadingDataGroup -> {
                         _uiState.update {
                             it.copy(
-                                nfcReadingStatusText = "Reading ${status.groupName} (${status.currentStep}/${status.totalSteps})..."
+                                isNfcChipConnected = true,
+                                nfcProgressPercentage = status.progressPercentage,
+                                nfcStepDetail = status.stepDetail,
+                                nfcReadingStatusText = "جاري قراءة ${status.groupName} (${status.currentStep}/${status.totalSteps})..."
                             )
                         }
-                        addDebugLog("Reading ${status.groupName}")
+                        addDebugLog("Reading ${status.groupName} (${status.progressPercentage}%)")
                     }
                     is NfcReadStatus.Success -> {
                         chipFaceBase64 = status.chipFaceBase64
                         addDebugLog("NFC Read Successful! Protocol=${status.nfcData.authProtocol}, Duration=${status.nfcData.readDurationMs}ms")
+                        _uiState.update {
+                            it.copy(
+                                isNfcChipConnected = true,
+                                nfcProgressPercentage = 100,
+                                nfcStepDetail = "اكتملت قراءة الشريحة بنجاح 100% ✓"
+                            )
+                        }
                         processCompleteRead(status.nfcData, status.chipFaceBitmap)
                     }
                     is NfcReadStatus.Error -> {
                         addDebugLog("NFC Read Failed: ${status.message}")
                         _uiState.update {
                             it.copy(
-                                currentStep = AppStep.NFC_TAP,
+                                isNfcChipConnected = false,
+                                nfcProgressPercentage = 0,
                                 nfcReadingStatusText = "",
-                                errorMessage = "NFC Read Failed: ${status.message}",
-                                statusMessage = "Connection failed with chip. Hold card steady and re-tap."
+                                nfcStepDetail = status.message,
+                                errorMessage = status.message,
+                                statusMessage = if (status.isCardLost) "انقطع الاتصال بالشريحة. أعد تثبيت البطاقة." else "فشل الاتصال بالشريحة."
                             )
                         }
                     }

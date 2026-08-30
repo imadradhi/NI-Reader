@@ -77,7 +77,24 @@ class MainActivity : AppCompatActivity() {
         analyzerExecutor = Executors.newSingleThreadExecutor()
 
         setupListeners()
+        setupBackNavigation()
         observeViewModel()
+    }
+
+    private fun setupBackNavigation() {
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val step = viewModel.uiState.value.currentStep
+                if (step != AppStep.IDLE && step != AppStep.VERIFICATION) {
+                    viewModel.cancelScanning()
+                } else if (step == AppStep.VERIFICATION) {
+                    viewModel.resetCardData()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 
     override fun onResume() {
@@ -103,6 +120,22 @@ class MainActivity : AppCompatActivity() {
     private fun setupListeners() {
         binding.btnStartReading.setOnClickListener {
             checkCameraPermissionAndStart()
+        }
+
+        binding.btnCameraBack.setOnClickListener {
+            viewModel.cancelScanning()
+        }
+
+        binding.btnProceedToNfc.setOnClickListener {
+            viewModel.proceedToNfc()
+        }
+
+        binding.btnRescanMrz.setOnClickListener {
+            viewModel.rescanMrz()
+        }
+
+        binding.btnCancelNfc.setOnClickListener {
+            viewModel.cancelScanning()
         }
 
         binding.btnDirectNfcTest.setOnClickListener {
@@ -175,28 +208,50 @@ class MainActivity : AppCompatActivity() {
     private fun updateCurrentStepLayout(state: UiState) {
         binding.layoutIdle.visibility = if (state.currentStep == AppStep.IDLE) View.VISIBLE else View.GONE
         binding.layoutCamera.visibility = if (state.currentStep == AppStep.CAMERA_FRONT || state.currentStep == AppStep.CAMERA_BACK) View.VISIBLE else View.GONE
+        binding.layoutMrzConfirmation.visibility = if (state.currentStep == AppStep.MRZ_CONFIRMATION) View.VISIBLE else View.GONE
         binding.layoutNfcTap.visibility = if (state.currentStep == AppStep.NFC_TAP) View.VISIBLE else View.GONE
         binding.layoutVerification.visibility = if (state.currentStep == AppStep.VERIFICATION || state.currentStep == AppStep.SENDING || state.currentStep == AppStep.SUCCESS) View.VISIBLE else View.GONE
 
-        // Reset capture lock & frame border when entering/changing step
+        // Reset capture lock & frame border when entering/changing camera step
         if (state.currentStep == AppStep.CAMERA_FRONT || state.currentStep == AppStep.CAMERA_BACK) {
             isCapturing.set(false)
             consecutiveDetectionCount = 0
             binding.cardFrameOverlay.setBackgroundResource(R.drawable.bg_card_frame)
             binding.dotAutoCapture.setBackgroundResource(R.drawable.shape_dot_success)
-            binding.textAutoCaptureStatus.text = "Auto-Capture: Searching..."
+            binding.textAutoCaptureStatus.text = "جاري البحث عن الـ MRZ..."
+            startCamera()
         }
 
         when (state.currentStep) {
             AppStep.CAMERA_FRONT -> {
-                binding.textCameraPrompt.text = "Step 1: Place front side inside the frame"
-                startCamera()
+                binding.textCameraPrompt.text = "الخطوة 1: ضع واجهة البطاقة داخل الإطار"
             }
             AppStep.CAMERA_BACK -> {
-                binding.textCameraPrompt.text = "Step 2: Point camera at back side (MRZ area)"
+                binding.textCameraPrompt.text = "الخطوة 2: وجه الكاميرا نحو خلفية البطاقة (منطقة الـ MRZ)"
+            }
+            AppStep.MRZ_CONFIRMATION -> {
+                val mrz = state.mrzData
+                if (mrz != null) {
+                    binding.textMrzDocNumber.text = "${mrz.documentNumber} ✓"
+                    binding.textMrzDob.text = "${mrz.formattedDob()} ✓"
+                    binding.textMrzExpiry.text = "${mrz.formattedExpiry()} ✓"
+                    binding.textMrzHolderName.text = "${mrz.primaryIdentifier} ${mrz.secondaryIdentifier}".trim()
+                }
             }
             AppStep.NFC_TAP -> {
-                binding.textNfcLiveProgress.text = if (state.nfcReadingStatusText.isNotEmpty()) state.nfcReadingStatusText else "Waiting for NFC chip tap..."
+                binding.dotNfcChip.setBackgroundResource(
+                    if (state.isNfcChipConnected) R.drawable.shape_dot_success else R.drawable.shape_dot_error
+                )
+                binding.textNfcChipStatus.text = if (state.isNfcChipConnected) "تم العثور على الشريحة ✓" else "بانتظار ملامسة الشريحة..."
+                binding.progressNfcHorizontal.progress = state.nfcProgressPercentage
+                binding.textNfcPercentage.text = "${state.nfcProgressPercentage}%"
+                binding.textNfcLiveProgress.text = if (state.nfcStepDetail.isNotEmpty()) state.nfcStepDetail else "ضع ظهر البطاقة ملامساً لحساس الـ NFC..."
+
+                // Step checklist
+                binding.textStepDg1.text = if (state.nfcProgressPercentage >= 25) "✓ 1. تم قراءة البيانات النصية ورقم الوثيقة (DG1)" else "⏳ 1. قراءة البيانات النصية ورقم الوثيقة (DG1)"
+                binding.textStepDg2.text = if (state.nfcProgressPercentage >= 60) "✓ 2. تم قراءة الصورة الشخصية الحيوية (DG2)" else "⏳ 2. قراءة الصورة الشخصية الحيوية (DG2)"
+                binding.textStepDg11.text = if (state.nfcProgressPercentage >= 80) "✓ 3. تم قراءة الاسم العربي والتفاصيل (DG11)" else "⏳ 3. قراءة الاسم العربي والتفاصيل الشخصية (DG11)"
+                binding.textStepSod.text = if (state.nfcProgressPercentage >= 95) "✓ 4. تم تدقيق التوقيع الرقمي والأمان (SOD)" else "⏳ 4. تدقيق التوقيع الرقمي والأمان (SOD)"
             }
             AppStep.VERIFICATION, AppStep.SENDING, AppStep.SUCCESS -> {
                 renderVerificationSummary(state)

@@ -226,20 +226,39 @@ public struct MainView: View {
             Color.black.opacity(0.4).ignoresSafeArea()
             
             VStack {
-                // Holographic Active Radar Pill
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.neonGold)
-                        .frame(width: 8, height: 8)
-                    Text(viewModel.cameraManager.isCardLocked ? "MRZ LOCKED ✓ AUTO-TRANSITION..." : "LIVE MRZ RADAR ACTIVE")
-                        .font(.system(size: 12, weight: .black, design: .monospaced))
-                        .foregroundColor(.white)
+                // Top Action Bar with Back Button & Holographic Active Radar Pill
+                HStack {
+                    Button(action: {
+                        withAnimation { viewModel.currentStep = .idle }
+                    }) {
+                        Image(systemName: "chevron.backward.circle.fill")
+                            .font(.system(size: 36))
+                            .foregroundColor(.white.opacity(0.9))
+                            .background(Circle().fill(Color.black.opacity(0.5)))
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.neonGold)
+                            .frame(width: 8, height: 8)
+                        Text(viewModel.cameraManager.isCardLocked ? "MRZ LOCKED ✓ AUTO-TRANSITION..." : "LIVE MRZ RADAR ACTIVE")
+                            .font(.system(size: 12, weight: .black, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.8))
+                    .cornerRadius(20)
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.white.opacity(0.2), lineWidth: 1.5))
+                    
+                    Spacer()
+                    
+                    // Spacer balancing layout
+                    Color.clear.frame(width: 36, height: 36)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.black.opacity(0.8))
-                .cornerRadius(20)
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.white.opacity(0.2), lineWidth: 1.5))
                 .padding(.top, 24)
                 
                 Spacer()

@@ -17,10 +17,12 @@
     <color name="text_muted">#64748B</color>
 
     <!-- Status Colors -->
+    <color name="success">#10B981</color>
     <color name="status_connected">#10B981</color>
     <color name="status_warning">#F59E0B</color>
     <color name="status_error">#EF4444</color>
     <color name="status_idle">#64748B</color>
+    <color name="info">#3B82F6</color>
     
     <!-- Accent / Scanning -->
     <color name="scan_laser">#00E5FF</color>

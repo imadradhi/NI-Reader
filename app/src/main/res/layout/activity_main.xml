@@ -255,33 +255,47 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- Floating Back Button -->
+            <ImageButton
+                android:id="@+id/btnCameraBack"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_badge_dark"
+                android:src="@android:drawable/ic_menu_revert"
+                android:contentDescription="رجوع"
+                app:tint="@color/text_primary"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
             <!-- Auto Capture Indicator Badge -->
             <LinearLayout
                 android:id="@+id/badgeAutoCapture"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="16dp"
                 android:background="@drawable/bg_badge_dark"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="6dp"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="8dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
                 <View
                     android:id="@+id/dotAutoCapture"
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
                     android:background="@drawable/shape_dot_success" />
 
                 <TextView
                     android:id="@+id/textAutoCaptureStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:text="Auto-Capture: Active"
+                    android:layout_marginStart="8dp"
+                    android:text="جاري مسح MRZ..."
                     android:textColor="@color/text_primary"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -306,7 +320,7 @@
                 android:background="@drawable/bg_badge_dark"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="8dp"
-                android:text="Place front side inside the frame"
+                android:text="ضع ظهر البطاقة داخل الإطار"
                 android:textColor="@color/text_primary"
                 android:textSize="14sp"
                 app:layout_constraintBottom_toTopOf="@id/cardFrameOverlay"
@@ -326,50 +340,367 @@
                 app:tint="@color/text_primary" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- 3. NFC Reading Layout -->
-        <LinearLayout
+        <!-- 2.5 MRZ Verification & Confirmation Layout -->
+        <ScrollView
+            android:id="@+id/layoutMrzConfirmation"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="20dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <!-- Success Header Icon -->
+                <ImageView
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_marginTop="8dp"
+                    android:src="@android:drawable/checkbox_on_background"
+                    app:tint="@color/success" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="تمت قراءة وتدقيق الـ MRZ بنجاح ✓"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="تم التحقق من الأرقام التدقيقية (Checksums) وجاهز لقراءة الشريحة"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:gravity="center" />
+
+                <!-- Card Preview Details -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="بيانات المفاتيح المستخرجة (BAC Keys)"
+                            android:textColor="@color/secondary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <!-- Doc Number -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal">
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="رقم الوثيقة:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+                            <TextView
+                                android:id="@+id/textMrzDocNumber"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="000000000 ✓"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- DOB -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="horizontal">
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="تاريخ الميلاد:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+                            <TextView
+                                android:id="@+id/textMrzDob"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="1990-01-01 ✓"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- Expiry -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="horizontal">
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="تاريخ النفاذ:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+                            <TextView
+                                android:id="@+id/textMrzExpiry"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="2030-01-01 ✓"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- Holder Name -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="horizontal">
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="اسم حامل الهوية:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+                            <TextView
+                                android:id="@+id/textMrzHolderName"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="CARDHOLDER"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Action Buttons -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnProceedToNfc"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="20dp"
+                    android:backgroundTint="@color/primary"
+                    android:text="متابعة لقراءة الشريحة (NFC) ➔"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:cornerRadius="12dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRescanMrz"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="10dp"
+                    android:text="إعادة مسح الكاميرا"
+                    android:textColor="@color/text_secondary"
+                    app:cornerRadius="12dp"
+                    app:strokeColor="@color/border_dark" />
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- 3. NFC Reading Layout with Multi-Stage Progress HUD -->
+        <ScrollView
             android:id="@+id/layoutNfcTap"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="24dp"
+            android:padding="20dp"
             android:visibility="gone">
 
-            <ImageView
-                android:id="@+id/imgNfcWave"
-                android:layout_width="140dp"
-                android:layout_height="140dp"
-                android:src="@android:drawable/stat_sys_upload"
-                app:tint="@color/secondary" />
-
-            <TextView
-                android:id="@+id/textNfcTitle"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Hold Card Near NFC Sensor"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/textNfcLiveProgress"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:text="Waiting for NFC chip tap..."
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp" />
+                <!-- NFC Pulse Icon -->
+                <ImageView
+                    android:id="@+id/imgNfcWave"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:layout_marginTop="10dp"
+                    android:src="@android:drawable/stat_sys_upload"
+                    app:tint="@color/secondary" />
 
-            <ProgressBar
-                android:id="@+id/progressNfc"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:indeterminateTint="@color/secondary" />
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/textNfcTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="ضع البطاقة خلف الهاتف"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <!-- Multi-stage Chip Connection Badge -->
+                <LinearLayout
+                    android:id="@+id/badgeNfcChipStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_badge_dark"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="6dp">
+
+                    <View
+                        android:id="@+id/dotNfcChip"
+                        android:layout_width="9dp"
+                        android:layout_height="9dp"
+                        android:background="@drawable/shape_dot_error" />
+
+                    <TextView
+                        android:id="@+id/textNfcChipStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="بانتظار ملامسة الشريحة..."
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Live Progress Bar (0% - 100%) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/textNfcLiveProgress"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="ضع ظهر البطاقة ملامساً لحساس الـ NFC..."
+                            android:textColor="@color/secondary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textNfcPercentage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0%"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/progressNfcHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="8dp"
+                        android:max="100"
+                        android:progress="0"
+                        app:indicatorColor="@color/secondary"
+                        app:trackColor="@color/surface_card"
+                        app:trackCornerRadius="4dp" />
+                </LinearLayout>
+
+                <!-- Step-by-Step Data Group Checklist Card -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:cardCornerRadius="14dp">
+
+                    <LinearLayout
+                        android:id="@+id/containerNfcSteps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="مراحل قراءة الشريحة الإلكترونية (ICAO 9303)"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textStepDg1"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="⏳ 1. قراءة البيانات النصية ورقم الوثيقة (DG1)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/textStepDg2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="⏳ 2. قراءة الصورة الشخصية الحيوية (DG2)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/textStepDg11"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="⏳ 3. قراءة الاسم العربي والتفاصيل الشخصية (DG11)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/textStepSod"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="⏳ 4. تدقيق التوقيع الرقمي والأمان (SOD)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancelNfc"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="16dp"
+                    android:text="إلغاء والعودة للرئيسية"
+                    android:textColor="@color/text_secondary"
+                    app:cornerRadius="12dp"
+                    app:strokeColor="@color/border_dark" />
+            </LinearLayout>
+        </ScrollView>
 
         <!-- 4. Verification & Result Summary Layout -->
         <ScrollView
