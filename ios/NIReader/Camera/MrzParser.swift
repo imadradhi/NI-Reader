@@ -51,9 +51,10 @@ public final class MrzParser {
             .replacingOccurrences(of: "|", with: "")
             .replacingOccurrences(of: "—", with: "")
             .replacingOccurrences(of: "-", with: "")
+            .filter { $0.isLetter || $0.isNumber || $0 == "<" }
     }
 
-    public static func sanitizeNumericField(_ field: String) -> String {
+    public static func sanitizeDigitsOnly(_ field: String) -> String {
         return field.uppercased()
             .replacingOccurrences(of: "O", with: "0")
             .replacingOccurrences(of: "Q", with: "0")
@@ -62,6 +63,7 @@ public final class MrzParser {
             .replacingOccurrences(of: "I", with: "1")
             .replacingOccurrences(of: "L", with: "1")
             .replacingOccurrences(of: "T", with: "1")
+            .replacingOccurrences(of: "J", with: "1")
             .replacingOccurrences(of: "Z", with: "2")
             .replacingOccurrences(of: "B", with: "8")
             .replacingOccurrences(of: "S", with: "5")
@@ -96,27 +98,27 @@ public final class MrzParser {
         if l2.count < 30 { l2 = l2.padding(toLength: 30, withPad: "<", startingAt: 0) }
         if l3.count < 30 { l3 = l3.padding(toLength: 30, withPad: "<", startingAt: 0) }
         
-        // Line 1: Doc Type (2), Country (3), Doc Num (9), Check Digit (1), Optional (15)
+        // Line 1: Doc Type (2), Country (3), Doc Num (9: alphanumeric e.g. AZ9431882), Check Digit (1), National No (12)
         let rawDoc = String(l1.dropFirst(5).prefix(9))
-        let docNum = sanitizeNumericField(rawDoc).replacingOccurrences(of: "<", with: "")
-        let docNumCd = l1.count > 14 ? Character(sanitizeNumericField(String(l1[l1.index(l1.startIndex, offsetBy: 14)]))) : "0"
+        let docNum = rawDoc.replacingOccurrences(of: "<", with: "")
+        let docNumCd = l1.count > 14 ? l1[l1.index(l1.startIndex, offsetBy: 14)] : "0"
         let isDocNumValid = verifyCheckDigit(rawDoc, expectedDigit: docNumCd)
         
         // Line 2: DOB (6), Check Digit (1), Gender (1), Expiry (6), Check Digit (1), Nationality (3)
-        let rawDob = sanitizeNumericField(String(l2.prefix(6)))
-        let dobCd = l2.count > 6 ? Character(sanitizeNumericField(String(l2[l2.index(l2.startIndex, offsetBy: 6)]))) : "0"
+        let rawDob = sanitizeDigitsOnly(String(l2.prefix(6)))
+        let dobCd = l2.count > 6 ? Character(sanitizeDigitsOnly(String(l2[l2.index(l2.startIndex, offsetBy: 6)]))) : "0"
         let isDobValid = verifyCheckDigit(rawDob, expectedDigit: dobCd)
         
         let gender = l2.count > 7 ? String(l2[l2.index(l2.startIndex, offsetBy: 7)]).replacingOccurrences(of: "<", with: "") : "M"
         
-        let rawExp = sanitizeNumericField(String(l2.dropFirst(8).prefix(6)))
-        let expCd = l2.count > 14 ? Character(sanitizeNumericField(String(l2[l2.index(l2.startIndex, offsetBy: 14)]))) : "0"
+        let rawExp = sanitizeDigitsOnly(String(l2.dropFirst(8).prefix(6)))
+        let expCd = l2.count > 14 ? Character(sanitizeDigitsOnly(String(l2[l2.index(l2.startIndex, offsetBy: 14)]))) : "0"
         let isExpValid = verifyCheckDigit(rawExp, expectedDigit: expCd)
         
-        // Line 3: Names (Primary << Secondary)
-        let nameComponents = l3.components(separatedBy: "<<")
-        let primaryName = nameComponents.first?.replacingOccurrences(of: "<", with: " ").trimmingCharacters(in: .whitespaces) ?? ""
-        let secondaryName = nameComponents.count > 1 ? nameComponents[1].replacingOccurrences(of: "<", with: " ").trimmingCharacters(in: .whitespaces) : ""
+        // Line 3: Names (e.g. <<EMAD<<<<<<<<...)
+        let nameParts = l3.components(separatedBy: "<").filter { !$0.isEmpty }
+        let primaryName = nameParts.first ?? ""
+        let secondaryName = nameParts.count > 1 ? nameParts.dropFirst().joined(separator: " ") : ""
         
         return MrzData(
             rawMrzLines: [l1, l2, l3],
@@ -144,36 +146,35 @@ public final class MrzParser {
         guard afterIrq.count >= 9 else { return nil }
         
         let rawDoc = String(afterIrq.prefix(9))
-        let docNum = sanitizeNumericField(rawDoc).replacingOccurrences(of: "<", with: "")
-        let docNumCd = afterIrq.count > 9 ? Character(sanitizeNumericField(String(afterIrq[afterIrq.index(afterIrq.startIndex, offsetBy: 9)]))) : "0"
+        let docNum = rawDoc.replacingOccurrences(of: "<", with: "")
+        let docNumCd = afterIrq.count > 9 ? afterIrq[afterIrq.index(afterIrq.startIndex, offsetBy: 9)] : "0"
         let isDocValid = verifyCheckDigit(rawDoc, expectedDigit: docNumCd)
         
-        guard let l2 = lines.first(where: { $0 != l1 && sanitizeNumericField($0).count >= 14 }) else { return nil }
-        let numL2 = sanitizeNumericField(l2)
-        let dob = String(numL2.prefix(6))
-        let dobCd = numL2.count > 6 ? numL2[numL2.index(numL2.startIndex, offsetBy: 6)] : "0"
-        let isDobValid = verifyCheckDigit(dob, expectedDigit: dobCd)
+        guard let l2 = lines.first(where: { $0 != l1 && (sanitizeDigitsOnly($0).count >= 14 || $0.contains("IRQ")) }) else { return nil }
+        let rawDob = sanitizeDigitsOnly(String(l2.prefix(6)))
+        let dobCd = l2.count > 6 ? Character(sanitizeDigitsOnly(String(l2[l2.index(l2.startIndex, offsetBy: 6)]))) : "0"
+        let isDobValid = verifyCheckDigit(rawDob, expectedDigit: dobCd)
         
-        let exp = numL2.count >= 14 ? String(numL2.dropFirst(8).prefix(6)) : ""
-        let expCd = numL2.count > 14 ? numL2[numL2.index(numL2.startIndex, offsetBy: 14)] : "0"
-        let isExpValid = exp.count == 6 && verifyCheckDigit(exp, expectedDigit: expCd)
+        let rawExp = l2.count >= 14 ? sanitizeDigitsOnly(String(l2.dropFirst(8).prefix(6))) : ""
+        let expCd = l2.count > 14 ? Character(sanitizeDigitsOnly(String(l2[l2.index(l2.startIndex, offsetBy: 14)]))) : "0"
+        let isExpValid = rawExp.count == 6 && verifyCheckDigit(rawExp, expectedDigit: expCd)
         
         let l3 = lines.first(where: { $0 != l1 && $0 != l2 }) ?? ""
-        let nameComponents = l3.components(separatedBy: "<<")
-        let primaryName = nameComponents.first?.replacingOccurrences(of: "<", with: " ").trimmingCharacters(in: .whitespaces) ?? ""
-        let secondaryName = nameComponents.count > 1 ? nameComponents[1].replacingOccurrences(of: "<", with: " ").trimmingCharacters(in: .whitespaces) : ""
+        let nameParts = l3.components(separatedBy: "<").filter { !$0.isEmpty }
+        let primaryName = nameParts.first ?? ""
+        let secondaryName = nameParts.count > 1 ? nameParts.dropFirst().joined(separator: " ") : ""
         
-        if !docNum.isEmpty && dob.count == 6 && exp.count == 6 {
+        if !docNum.isEmpty && rawDob.count == 6 && rawExp.count == 6 {
             return MrzData(
                 rawMrzLines: [l1, l2, l3],
                 documentNumber: docNum,
                 documentNumberCheckDigit: String(docNumCd),
                 isDocumentNumberValid: isDocValid,
-                dateOfBirth: dob,
+                dateOfBirth: rawDob,
                 dateOfBirthCheckDigit: String(dobCd),
                 isDateOfBirthValid: isDobValid,
                 gender: "M",
-                expiryDate: exp,
+                expiryDate: rawExp,
                 expiryDateCheckDigit: String(expCd),
                 isExpiryDateValid: isExpValid,
                 compositeCheckDigit: "0",

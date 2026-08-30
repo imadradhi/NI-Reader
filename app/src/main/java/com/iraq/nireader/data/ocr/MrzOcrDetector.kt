@@ -77,7 +77,7 @@ class MrzOcrDetector {
 
         // Strategy B: Anchor-based matching among all lines
         val line1 = allLines.firstOrNull { it.contains("IRQ") && (it.startsWith("I") || it.contains("<") || it.length >= 15) }
-        val line2 = allLines.firstOrNull { it != line1 && it.length >= 14 && MrzParser.sanitizeNumericField(it).length >= 12 }
+        val line2 = allLines.firstOrNull { it != line1 && it.length >= 14 && MrzParser.sanitizeDigitsOnly(it).length >= 12 }
         val line3 = allLines.firstOrNull { it != line1 && it != line2 && (it.contains("<<") || it.contains("<")) }
 
         if (line1 != null && line2 != null) {

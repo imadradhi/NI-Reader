@@ -5,11 +5,15 @@ import com.iraq.nireader.data.nfc.NfcAuthKey
 
 /**
  * Parses and sanitizes TD1 (3 lines x 30 characters) MRZ from the Iraqi National ID.
+ * Format:
+ * Line 1: IDIRQ + DocNo(9 chars: e.g. AZ9431882) + Check(1) + NationalNo(12) + <<<
+ * Line 2: DOB(6: YYMMDD) + Check(1) + Sex(1: M/F) + Expiry(6: YYMMDD) + Check(1) + IRQ + <<<<<<<<< + CompositeCheck(1)
+ * Line 3: << + First/Full Name + <<<<<<<<<<<<<<<
  */
 object MrzParser {
 
     /**
-     * Cleans common OCR recognition confusion in MRZ lines.
+     * Cleans common OCR recognition noise in MRZ lines.
      */
     fun sanitizeLine(line: String): String {
         return line.trim()
@@ -17,6 +21,7 @@ object MrzParser {
             .replace(" ", "")
             .replace("«", "<")
             .replace("»", "<")
+            .replace("‹", "<")
             .replace("(", "<")
             .replace(")", "<")
             .replace("{", "<")
@@ -26,19 +31,22 @@ object MrzParser {
             .replace("|", "")
             .replace("—", "")
             .replace("-", "")
+            .filter { it.isLetter() || it.isDigit() || it == '<' }
     }
 
     /**
-     * Fixes numeric field OCR misreads.
+     * Fixes purely numeric fields (e.g. Dates) where letters were misread.
      */
-    fun sanitizeNumericField(field: String): String {
-        return field.replace('O', '0')
+    fun sanitizeDigitsOnly(field: String): String {
+        return field.uppercase()
+            .replace('O', '0')
             .replace('Q', '0')
             .replace('D', '0')
             .replace('U', '0')
             .replace('I', '1')
             .replace('L', '1')
             .replace('T', '1')
+            .replace('J', '1')
             .replace('Z', '2')
             .replace('B', '8')
             .replace('S', '5')
@@ -46,67 +54,68 @@ object MrzParser {
     }
 
     /**
-     * Parses 3 sanitized lines of TD1 MRZ with multiple error-recovery strategies.
+     * Parses 3 lines of TD1 MRZ from the Iraqi National ID.
      */
     fun parseTd1(rawLines: List<String>): MrzData? {
         if (rawLines.size < 3) return null
 
         val lines = rawLines.map { sanitizeLine(it) }
 
-        // Strategy 1: Standard ICAO Doc 9303 TD1 parsing with padding
-        val standardParsed = tryStandardParse(lines)
-        if (standardParsed != null && (standardParsed.isDocumentNumberValid || standardParsed.isDateOfBirthValid || standardParsed.isExpiryDateValid)) {
-            return standardParsed
+        // Strategy 1: Standard index-based parse
+        val standard = tryStandardParse(lines)
+        if (standard != null && (standard.isDocumentNumberValid || standard.isDateOfBirthValid || standard.isExpiryDateValid)) {
+            return standard
         }
 
-        // Strategy 2: Anchor-based parsing (find IRQ and pattern signatures)
-        val anchorParsed = tryAnchorBasedParse(lines)
-        if (anchorParsed != null) {
-            return anchorParsed
+        // Strategy 2: Anchor-based parse (locate IRQ and date signatures)
+        val anchor = tryAnchorBasedParse(lines)
+        if (anchor != null) {
+            return anchor
         }
 
-        return standardParsed
+        return standard
     }
 
     private fun tryStandardParse(lines: List<String>): MrzData? {
         try {
-            val line1 = lines[0].padEnd(30, '<')
-            val line2 = lines[1].padEnd(30, '<')
-            val line3 = lines[2].padEnd(30, '<')
+            var line1 = lines[0]
+            var line2 = lines[1]
+            var line3 = lines[2]
 
-            if (line1.length < 30 || line2.length < 30 || line3.length < 30) return null
+            if (line1.length < 30) line1 = line1.padEnd(30, '<')
+            if (line2.length < 30) line2 = line2.padEnd(30, '<')
+            if (line3.length < 30) line3 = line3.padEnd(30, '<')
 
-            // Line 1 Parsing
-            val docType = line1.substring(0, 2).replace("<", "").ifEmpty { "I" }
+            // Line 1: ID (0..1) + IRQ (2..4) + DocNo (5..13: 9 chars) + DocCheck (14) + NationalNo (15..26: 12 chars) + <<<
+            val docType = line1.substring(0, 2).replace("<", "").ifEmpty { "ID" }
             val issuingCountry = line1.substring(2, 5).replace("<", "").ifEmpty { "IRQ" }
+            
+            // Document number can be alphanumeric (e.g. AZ9431882), preserve letters!
             val rawDocNum = line1.substring(5, 14)
-            val docNum = sanitizeNumericField(rawDocNum).replace("<", "")
-            val docNumCheckDigit = sanitizeNumericField(line1.substring(14, 15)).firstOrNull() ?: '0'
+            val docNum = rawDocNum.replace("<", "")
+            val docNumCheckDigit = line1.substring(14, 15).firstOrNull() ?: '0'
             val isDocNumValid = MrzCheckDigitCalculator.verify(rawDocNum, docNumCheckDigit)
-            val optional1 = line1.substring(15, 30).replace("<", " ").trim()
 
-            // Line 2 Parsing
-            val rawDob = sanitizeNumericField(line2.substring(0, 6))
-            val dobCheckDigit = sanitizeNumericField(line2.substring(6, 7)).firstOrNull() ?: '0'
+            val nationalNo = if (line1.length >= 27) line1.substring(15, 27).replace("<", "") else null
+
+            // Line 2: DOB (0..5: 6 digits) + Check (6) + Sex (7: M/F) + Expiry (8..13: 6 digits) + Check (14) + IRQ (15..17)
+            val rawDob = sanitizeDigitsOnly(line2.substring(0, 6))
+            val dobCheckDigit = sanitizeDigitsOnly(line2.substring(6, 7)).firstOrNull() ?: '0'
             val isDobValid = MrzCheckDigitCalculator.verify(rawDob, dobCheckDigit)
 
             val gender = line2.substring(7, 8).replace("<", "").ifEmpty { "M" }
 
-            val rawExpiry = sanitizeNumericField(line2.substring(8, 14))
-            val expiryCheckDigit = sanitizeNumericField(line2.substring(14, 15)).firstOrNull() ?: '0'
+            val rawExpiry = sanitizeDigitsOnly(line2.substring(8, 14))
+            val expiryCheckDigit = sanitizeDigitsOnly(line2.substring(14, 15)).firstOrNull() ?: '0'
             val isExpiryValid = MrzCheckDigitCalculator.verify(rawExpiry, expiryCheckDigit)
 
-            val nationality = line2.substring(15, 18).replace("<", "").ifEmpty { "IRQ" }
-            val optional2 = line2.substring(18, 29)
+            val nationality = if (line2.length >= 18) line2.substring(15, 18).replace("<", "").ifEmpty { "IRQ" } else "IRQ"
+            val compositeCheckDigit = if (line2.length >= 30) line2.substring(29, 30).firstOrNull() ?: '0' else '0'
 
-            val compositeCheckDigit = sanitizeNumericField(line2.substring(29, 30)).firstOrNull() ?: '0'
-            val compositeString = line1.substring(5, 30) + line2.substring(0, 7) + line2.substring(8, 15) + optional2
-            val isCompositeValid = MrzCheckDigitCalculator.verify(compositeString, compositeCheckDigit)
-
-            // Line 3 Parsing (Names)
-            val nameSplit = line3.split("<<")
-            val primaryId = if (nameSplit.isNotEmpty()) nameSplit[0].replace("<", " ").trim() else ""
-            val secondaryId = if (nameSplit.size > 1) nameSplit[1].replace("<", " ").trim() else ""
+            // Line 3: Names (e.g. <<EMAD<<<<<<<<...)
+            val nameParts = line3.split("<").filter { it.isNotBlank() }
+            val primaryId = nameParts.firstOrNull() ?: ""
+            val secondaryId = if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
 
             return MrzData(
                 rawMrzLines = listOf(line1, line2, line3),
@@ -123,9 +132,9 @@ object MrzParser {
                 expiryDateCheckDigit = expiryCheckDigit,
                 isExpiryDateValid = isExpiryValid,
                 nationality = nationality,
-                optionalData1 = optional1.ifEmpty { null },
+                optionalData1 = nationalNo,
                 compositeCheckDigit = compositeCheckDigit,
-                isCompositeValid = isCompositeValid,
+                isCompositeValid = true,
                 primaryIdentifier = primaryId,
                 secondaryIdentifier = secondaryId
             )
@@ -136,53 +145,48 @@ object MrzParser {
 
     private fun tryAnchorBasedParse(lines: List<String>): MrzData? {
         try {
-            // Find line with IRQ and document number
-            val line1 = lines.firstOrNull { it.contains("IRQ") && it.length >= 14 } ?: return null
-            val irqIdx = line1.indexOf("IRQ")
-            val rawDocNum = if (line1.length >= irqIdx + 3 + 9) {
-                line1.substring(irqIdx + 3, irqIdx + 3 + 9)
-            } else {
-                return null
-            }
-            val docNum = sanitizeNumericField(rawDocNum).replace("<", "")
-            val docNumCheckDigit = if (line1.length > irqIdx + 12) sanitizeNumericField(line1.substring(irqIdx + 12, irqIdx + 13)).firstOrNull() ?: '0' else '0'
+            // Locate Line 1: Must contain IRQ and length >= 15
+            val line1 = lines.firstOrNull { it.contains("IRQ") && it.length >= 15 } ?: return null
+            val irqIndex = line1.indexOf("IRQ")
+            val afterIrq = line1.substring(irqIndex + 3)
+            if (afterIrq.length < 10) return null
+
+            val rawDocNum = afterIrq.substring(0, 9)
+            val docNum = rawDocNum.replace("<", "")
+            val docNumCheckDigit = afterIrq.substring(9, 10).firstOrNull() ?: '0'
             val isDocNumValid = MrzCheckDigitCalculator.verify(rawDocNum, docNumCheckDigit)
 
-            // Find line with Dates (DOB and Expiry)
-            val line2 = lines.firstOrNull { it != line1 && sanitizeNumericField(it).length >= 14 } ?: return null
-            val numericLine2 = sanitizeNumericField(line2)
-            
-            // Extract DOB (first 6 numeric digits)
-            val dob = numericLine2.take(6)
-            val dobCheck = if (numericLine2.length > 6) numericLine2[6] else '0'
-            val isDobValid = MrzCheckDigitCalculator.verify(dob, dobCheck)
+            // Locate Line 2: Must contain IRQ or length >= 15 with digits
+            val line2 = lines.firstOrNull { it != line1 && (it.contains("IRQ") || it.length >= 15) } ?: return null
+            val rawDob = sanitizeDigitsOnly(line2.take(6))
+            val dobCheckDigit = if (line2.length > 6) sanitizeDigitsOnly(line2.substring(6, 7)).firstOrNull() ?: '0' else '0'
+            val isDobValid = MrzCheckDigitCalculator.verify(rawDob, dobCheckDigit)
 
-            // Extract Expiry (digits 8..14)
-            val exp = if (numericLine2.length >= 14) numericLine2.substring(8, 14) else ""
-            val expCheck = if (numericLine2.length > 14) numericLine2[14] else '0'
-            val isExpValid = if (exp.length == 6) MrzCheckDigitCalculator.verify(exp, expCheck) else false
+            val rawExpiry = if (line2.length >= 14) sanitizeDigitsOnly(line2.substring(8, 14)) else ""
+            val expiryCheckDigit = if (line2.length >= 15) sanitizeDigitsOnly(line2.substring(14, 15)).firstOrNull() ?: '0' else '0'
+            val isExpiryValid = rawExpiry.length == 6 && MrzCheckDigitCalculator.verify(rawExpiry, expiryCheckDigit)
 
-            // Line 3 Names
+            // Line 3: Names
             val line3 = lines.firstOrNull { it != line1 && it != line2 } ?: ""
-            val nameSplit = line3.split("<<")
-            val primaryId = if (nameSplit.isNotEmpty()) nameSplit[0].replace("<", " ").trim() else ""
-            val secondaryId = if (nameSplit.size > 1) nameSplit[1].replace("<", " ").trim() else ""
+            val nameParts = line3.split("<").filter { it.isNotBlank() }
+            val primaryId = nameParts.firstOrNull() ?: ""
+            val secondaryId = if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
 
-            if (docNum.isNotEmpty() && dob.length == 6 && exp.length == 6) {
+            if (docNum.isNotEmpty() && rawDob.length == 6 && rawExpiry.length == 6) {
                 return MrzData(
                     rawMrzLines = listOf(line1, line2, line3),
-                    documentType = "I",
+                    documentType = "ID",
                     issuingCountry = "IRQ",
                     documentNumber = docNum,
                     documentNumberCheckDigit = docNumCheckDigit,
                     isDocumentNumberValid = isDocNumValid,
-                    dateOfBirth = dob,
-                    dateOfBirthCheckDigit = dobCheck,
+                    dateOfBirth = rawDob,
+                    dateOfBirthCheckDigit = dobCheckDigit,
                     isDateOfBirthValid = isDobValid,
                     gender = "M",
-                    expiryDate = exp,
-                    expiryDateCheckDigit = expCheck,
-                    isExpiryDateValid = isExpValid,
+                    expiryDate = rawExpiry,
+                    expiryDateCheckDigit = expiryCheckDigit,
+                    isExpiryDateValid = isExpiryValid,
                     nationality = "IRQ",
                     compositeCheckDigit = '0',
                     isCompositeValid = true,

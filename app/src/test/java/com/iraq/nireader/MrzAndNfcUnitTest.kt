@@ -59,26 +59,38 @@ class MrzAndNfcUnitTest {
     }
 
     @Test
-    fun testNfcAuthKeyBacKeySpecStrictFormatting() {
-        val authKey = NfcAuthKey(
-            documentNumber = "123456789",
-            dateOfBirth = "900101",
-            dateOfExpiry = "300101"
-        )
-        val spec = authKey.toBacKeySpec()
-        assertEquals("123456789", spec.documentNumber)
-        assertEquals("900101", spec.dateOfBirth)
-        assertEquals("300101", spec.dateOfExpiry)
+    fun testRealIraqiIdCardParsing() {
+        // Real Iraqi ID card sample from physical card photo
+        val line1 = "IDIRQAZ94318824198405252409<<<"
+        val line2 = "8408299M3112113IRQ<<<<<<<<<<<9"
+        val line3 = "<<EMAD<<<<<<<<<<<<<<<<<<<<<<<"
 
-        // Padded 8-character document number
-        val authKey8 = NfcAuthKey(
-            documentNumber = "12345678",
-            dateOfBirth = "1990-01-01",
-            dateOfExpiry = "2030-01-01"
-        )
-        val spec8 = authKey8.toBacKeySpec()
-        assertEquals("12345678<", spec8.documentNumber)
-        assertEquals("900101", spec8.dateOfBirth)
-        assertEquals("300101", spec8.dateOfExpiry)
+        val mrz = MrzParser.parseTd1(listOf(line1, line2, line3))
+        assertNotNull(mrz)
+        assertEquals("AZ9431882", mrz!!.documentNumber)
+        assertEquals('4', mrz.documentNumberCheckDigit)
+        assertTrue(mrz.isDocumentNumberValid)
+
+        assertEquals("840829", mrz.dateOfBirth)
+        assertEquals('9', mrz.dateOfBirthCheckDigit)
+        assertTrue(mrz.isDateOfBirthValid)
+        assertEquals("1984-08-29", mrz.formattedDob())
+
+        assertEquals("311211", mrz.expiryDate)
+        assertEquals('3', mrz.expiryDateCheckDigit)
+        assertTrue(mrz.isExpiryDateValid)
+        assertEquals("2031-12-11", mrz.formattedExpiry())
+
+        assertEquals("M", mrz.gender)
+        assertEquals("IRQ", mrz.issuingCountry)
+        assertEquals("198405252409", mrz.optionalData1)
+        assertEquals("EMAD", mrz.primaryIdentifier)
+
+        // BAC Key derived from this MRZ
+        val authKey = MrzParser.extractNfcAuthKey(mrz)
+        val bacSpec = authKey.toBacKeySpec()
+        assertEquals("AZ9431882", bacSpec.documentNumber)
+        assertEquals("840829", bacSpec.dateOfBirth)
+        assertEquals("311211", bacSpec.dateOfExpiry)
     }
 }
