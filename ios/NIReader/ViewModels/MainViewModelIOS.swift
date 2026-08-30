@@ -261,7 +261,6 @@ public final class MainViewModelIOS: ObservableObject {
     }
     
     public func resetFlow() {
-        isNfcScanTriggered = false
         cameraManager.stopSession()
         nfcReader.invalidate()
         
