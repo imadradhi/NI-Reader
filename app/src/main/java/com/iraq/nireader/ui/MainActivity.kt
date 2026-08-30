@@ -405,31 +405,21 @@ class MainActivity : AppCompatActivity() {
 
         if (currentStep == AppStep.CAMERA_BACK) {
             val directMrz = ocrDetector.extractMrzFromText(visionText)
-            if (directMrz != null) {
+            if (directMrz != null && directMrz.isDocumentNumberValid && directMrz.isDateOfBirthValid && directMrz.isExpiryDateValid) {
                 if (isCapturing.compareAndSet(false, true)) {
                     runOnUiThread {
                         triggerHapticFeedback()
                         binding.cardFrameOverlay.setBackgroundResource(R.drawable.bg_card_frame_active)
-                        binding.textAutoCaptureStatus.text = "تم مسح الـ MRZ بنجاح ✓"
+                        binding.textAutoCaptureStatus.text = "تم مسح الـ MRZ وتدقيق الأرقام بنجاح ✓"
                         viewModel.onMrzExtractedDirectly(directMrz)
                     }
                 }
                 return
-            }
-
-            // Secondary check: live check for TD1 candidate lines
-            val candidateLines = mutableListOf<String>()
-            for (block in visionText.textBlocks) {
-                for (line in block.lines) {
-                    val cleaned = MrzParser.sanitizeLine(line.text)
-                    if (cleaned.length >= 15 && (cleaned.contains("<") || cleaned.startsWith("I") || cleaned.contains("IRQ"))) {
-                        candidateLines.add(cleaned)
-                    }
+            } else {
+                runOnUiThread {
+                    binding.textAutoCaptureStatus.text = "جاري قراءة وتدقيق الـ MRZ..."
                 }
-            }
-
-            if (candidateLines.size >= 2) {
-                isCardTargetDetected = true
+                return
             }
         } else if (currentStep == AppStep.CAMERA_FRONT) {
             // Front side detection: Check for ID text elements, multiple structured text blocks

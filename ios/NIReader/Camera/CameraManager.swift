@@ -103,38 +103,49 @@ public final class CameraManager: NSObject, ObservableObject, AVCaptureVideoData
             self.evaluateDetectedText(detectedTexts, now: now)
         }
         
-        request.recognitionLevel = .fast
+        request.recognitionLevel = .accurate
         request.usesLanguageCorrection = false
+        request.recognitionLanguages = ["en-US"]
+        request.customWords = ["IDIRQ", "IRQ", "EMAD"]
         
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: CGImagePropertyOrientation.right, options: [:])
         try? handler.perform([request])
     }
     
     private func evaluateDetectedText(_ texts: [String], now: TimeInterval) {
-        let candidateLines = texts.map { MrzParser.sanitizeLine($0) }
-            .filter { (25...35).contains($0.count) && ($0.contains("<") || $0.starts(with: "I") || $0.contains("IRQ")) }
-        
-        let isDetected = candidateLines.count >= 2
-        
+        // Try parsing directly with mathematical check digit validation
+        if let parsed = MrzParser.parseTd1(texts) {
+            // STRICT GATE: Only lock and capture if all 3 check digits are mathematically valid!
+            let isValid = parsed.isDocumentNumberValid && parsed.isDateOfBirthValid && parsed.isExpiryDateValid
+            
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                if isValid {
+                    self.consecutiveDetectionCount += 1
+                    self.isCardLocked = true
+                    self.autoCapturePrompt = "MRZ Verified ✓ Capturing..."
+                    
+                    if self.consecutiveDetectionCount >= 1 && !self.isCapturing {
+                        self.isCapturing = true
+                        self.lastAutoCaptureTime = now
+                        self.triggerHaptic()
+                        self.onMrzLinesDetected?(parsed.rawMrzLines)
+                        self.triggerManualCapture()
+                    }
+                } else {
+                    // Check digits failed (blurry or incomplete frame) - do NOT accept garbage!
+                    self.isCardLocked = false
+                    self.autoCapturePrompt = "Hold steady... reading MRZ"
+                }
+            }
+            return
+        }
+
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            if isDetected {
-                self.consecutiveDetectionCount += 1
-                self.isCardLocked = true
-                self.autoCapturePrompt = "MRZ Locked ✓ Auto-Capturing..."
-                
-                if self.consecutiveDetectionCount >= 2 && !self.isCapturing {
-                    self.isCapturing = true
-                    self.lastAutoCaptureTime = now
-                    self.triggerHaptic()
-                    self.onMrzLinesDetected?(candidateLines)
-                    self.triggerManualCapture()
-                }
-            } else {
-                self.consecutiveDetectionCount = 0
-                self.isCardLocked = false
-                self.autoCapturePrompt = "Point camera at ID card back (MRZ)"
-            }
+            self.consecutiveDetectionCount = 0
+            self.isCardLocked = false
+            self.autoCapturePrompt = "Point camera at ID card back (MRZ)"
         }
     }
     
