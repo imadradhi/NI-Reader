@@ -96,7 +96,7 @@ public final class MrzParser {
             return anchor
         }
 
-        return standard
+        return tryStandardParse(lines)
     }
 
     private static func tryStandardParse(_ lines: [String]) -> MrzData? {
