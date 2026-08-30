@@ -532,14 +532,44 @@ public struct MainView: View {
                 .cornerRadius(14)
                 .padding(.horizontal, 20)
                 
-                Button(action: { viewModel.cancelScanning() }) {
-                    Text("إلغاء والعودة للرئيسية")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.gray)
+                // Action Buttons Row
+                VStack(spacing: 10) {
+                    Button(action: { viewModel.proceedToNfc() }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.clockwise")
+                            Text("إعادة تشغيل حساس الـ NFC")
+                                .font(.system(size: 15, weight: .bold))
+                        }
+                        .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.white.opacity(0.06))
+                        .frame(height: 50)
+                        .background(Color.neonCyan)
                         .cornerRadius(12)
+                    }
+
+                    Button(action: { viewModel.triggerDirectNfcComplete() }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.seal.fill")
+                            Text("استمرار بالبيانات المقروءة والتحقق")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .foregroundColor(.neonEmerald)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.neonEmerald.opacity(0.12))
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neonEmerald.opacity(0.4), lineWidth: 1))
+                    }
+
+                    Button(action: { viewModel.cancelScanning() }) {
+                        Text("إلغاء والعودة للرئيسية")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 42)
+                            .background(Color.white.opacity(0.06))
+                            .cornerRadius(10)
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)

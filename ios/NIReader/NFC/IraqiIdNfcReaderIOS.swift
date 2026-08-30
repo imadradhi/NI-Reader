@@ -124,24 +124,30 @@ public final class IraqiIdNfcReaderIOS: NSObject, NFCTagReaderSessionDelegate, N
     
     // MARK: - NFCTagReaderSessionDelegate
     public func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
-        onProgressUpdate?("NFC Ready. Searching for smart card...")
+        onProgressUpdate?("حساس الـ NFC نشط. جاري البحث عن شريحة البطاقة...")
     }
     
     public func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
         isSessionActive = false
         let nfcError = error as? NFCReaderError
         if nfcError?.code == .readerSessionInvalidationErrorUserCanceled {
+            onProgressUpdate?("تم إلغاء المسح من قبل المستخدم")
             return
         }
         
-        // If ISO 7816 session is restricted or terminated, try NDEF fallback
-        if nfcError?.code == .readerErrorUnsupportedFeature || nfcError?.code == .readerErrorSecurityViolation {
-            DispatchQueue.main.async { [weak self] in
+        // If ISO 7816 session is restricted, terminated unexpectedly, or system is busy: fallback to NDEF session
+        if nfcError?.code == .readerErrorUnsupportedFeature || 
+           nfcError?.code == .readerErrorSecurityViolation || 
+           nfcError?.code == .readerSessionInvalidationErrorSessionTerminatedUnexpectedly ||
+           nfcError?.code == .readerSessionInvalidationErrorSystemIsBusy {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
                 self?.isSessionActive = true
                 self?.startNdefFallback()
             }
+        } else if nfcError?.code == .readerSessionInvalidationErrorSessionTimeout {
+            onError?("انتهت مهلة البحث عن الشريحة. اضغط إعادة المحاولة وضع البطاقة على أعلى الهاتف")
         } else {
-            onError?(error.localizedDescription)
+            onError?("يرجى ملامسة أعلى ظهر الهاتف بشريحة البطاقة والضغط على إعادة المحاولة")
         }
     }
     
