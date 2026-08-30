@@ -71,7 +71,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         usbConnectionManager.startListening()
         observeUsbState()
         checkNfcAvailability()
-        checkApiHealth()
+        addDebugLog("App running in standalone offline mode.")
     }
 
     private fun observeUsbState() {
@@ -80,9 +80,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val connected = (state == UsbState.CONNECTED)
                 _uiState.update { it.copy(usbConnected = connected) }
                 addDebugLog("USB State Changed: $state")
-                if (connected) {
-                    checkApiHealth()
-                }
             }
         }
     }
@@ -95,16 +92,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun checkApiHealth() {
-        viewModelScope.launch {
-            val isHealthy = desktopApiClient.checkHealth()
-            _uiState.update { it.copy(apiConnected = isHealthy) }
-            addDebugLog("API Health check: isHealthy=$isHealthy (Host: ${desktopApiClient.getBaseUrl()})")
-        }
+        // Disabled per user requirement (100% standalone offline mode)
     }
 
     fun setApiUrl(url: String) {
-        desktopApiClient.updateBaseUrl(url)
-        checkApiHealth()
+        // Disabled per user requirement
     }
 
     fun startReadingFlow() {

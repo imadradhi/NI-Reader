@@ -68,6 +68,7 @@
                     android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@android:drawable/ic_menu_manage"
+                    android:visibility="gone"
                     app:tint="@color/text_secondary" />
 
                 <ImageButton
@@ -97,7 +98,8 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_status_pill"
                     android:gravity="center"
-                    android:paddingVertical="6dp">
+                    android:paddingVertical="6dp"
+                    android:visibility="gone">
 
                     <View
                         android:id="@+id/dotUsb"
@@ -124,7 +126,8 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_status_pill"
                     android:gravity="center"
-                    android:paddingVertical="6dp">
+                    android:paddingVertical="6dp"
+                    android:visibility="gone">
 
                     <View
                         android:id="@+id/dotApi"
@@ -855,19 +858,18 @@
                         android:backgroundTint="@color/primary"
                         android:text="@string/btn_send_now"
                         android:textColor="@color/text_primary"
+                        android:visibility="gone"
                         app:cornerRadius="10dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnResetCard"
                         style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="52dp"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="@string/btn_reset"
-                        android:textColor="@color/text_secondary"
-                        app:cornerRadius="10dp"
-                        app:strokeColor="@color/border_dark" />
+                        android:text="قراءة بطاقة جديدة"
+                        android:textColor="@color/text_primary"
+                        app:cornerRadius="12dp"
+                        app:strokeColor="@color/primary" />
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>
