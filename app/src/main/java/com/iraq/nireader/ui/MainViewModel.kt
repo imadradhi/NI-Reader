@@ -247,13 +247,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onNfcTagDiscovered(tag: Tag) {
         val currentStep = _uiState.value.currentStep
-        if (currentStep != AppStep.NFC_TAP && currentStep != AppStep.MRZ_CONFIRMATION && currentStep != AppStep.IDLE) return
+        // Strictly only accept NFC reads when explicitly on the NFC_TAP step
+        if (currentStep != AppStep.NFC_TAP) {
+            addDebugLog("NFC tag tapped outside of NFC step (Current: $currentStep). Ignoring.")
+            return
+        }
 
         val mrz = _uiState.value.mrzData
         if (mrz == null) {
             _uiState.update {
                 it.copy(
-                    errorMessage = "يرجى مسح الـ MRZ أولاً أو إدخال مفاتيح BAC قبل قراءة الـ NFC",
+                    errorMessage = "يرجى مسح الـ MRZ أولاً للتأكد من البيانات قبل قراءة الـ NFC",
                     statusMessage = "مفاتيح المصادقة غير متوفرة"
                 )
             }
@@ -261,7 +265,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val authKey = MrzParser.extractNfcAuthKey(mrz)
-        addDebugLog("NFC Tag Discovered. Initiating reading with BAC Key: ${authKey.documentNumber}")
+        addDebugLog("NFC Tag Discovered. Initiating reading with BAC Key: Doc=${authKey.documentNumber}, DOB=${authKey.dateOfBirth}, Exp=${authKey.dateOfExpiry}")
 
         viewModelScope.launch {
             nfcReader.readCard(tag, authKey).collect { status ->

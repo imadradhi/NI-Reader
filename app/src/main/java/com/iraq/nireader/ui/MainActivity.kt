@@ -208,6 +208,8 @@ class MainActivity : AppCompatActivity() {
         binding.textNfcStatus.text = if (state.nfcReady) "NFC: Ready" else "NFC: Disabled"
     }
 
+    private var activeCameraStep: AppStep? = null
+
     private fun updateCurrentStepLayout(state: UiState) {
         binding.layoutIdle.visibility = if (state.currentStep == AppStep.IDLE) View.VISIBLE else View.GONE
         binding.layoutCamera.visibility = if (state.currentStep == AppStep.CAMERA_FRONT || state.currentStep == AppStep.CAMERA_BACK) View.VISIBLE else View.GONE
@@ -215,14 +217,22 @@ class MainActivity : AppCompatActivity() {
         binding.layoutNfcTap.visibility = if (state.currentStep == AppStep.NFC_TAP) View.VISIBLE else View.GONE
         binding.layoutVerification.visibility = if (state.currentStep == AppStep.VERIFICATION || state.currentStep == AppStep.SENDING || state.currentStep == AppStep.SUCCESS) View.VISIBLE else View.GONE
 
-        // Reset capture lock & frame border when entering/changing camera step
+        // Manage camera lifecycle cleanly without re-triggering loop
         if (state.currentStep == AppStep.CAMERA_FRONT || state.currentStep == AppStep.CAMERA_BACK) {
-            isCapturing.set(false)
-            consecutiveDetectionCount = 0
-            binding.cardFrameOverlay.setBackgroundResource(R.drawable.bg_card_frame)
-            binding.dotAutoCapture.setBackgroundResource(R.drawable.shape_dot_success)
-            binding.textAutoCaptureStatus.text = "جاري البحث عن الـ MRZ..."
-            startCamera()
+            if (activeCameraStep != state.currentStep) {
+                activeCameraStep = state.currentStep
+                isCapturing.set(false)
+                consecutiveDetectionCount = 0
+                binding.cardFrameOverlay.setBackgroundResource(R.drawable.bg_card_frame)
+                binding.dotAutoCapture.setBackgroundResource(R.drawable.shape_dot_success)
+                binding.textAutoCaptureStatus.text = "جاري مسح MRZ..."
+                startCamera()
+            }
+        } else {
+            if (activeCameraStep != null) {
+                activeCameraStep = null
+                stopCamera()
+            }
         }
 
         when (state.currentStep) {
@@ -235,10 +245,11 @@ class MainActivity : AppCompatActivity() {
             AppStep.MRZ_CONFIRMATION -> {
                 val mrz = state.mrzData
                 if (mrz != null) {
+                    val name = listOf(mrz.primaryIdentifier, mrz.secondaryIdentifier).filter { it.isNotEmpty() }.joinToString(" ")
+                    binding.textMrzHolderName.text = name.ifEmpty { "حامل الهوية" }
                     binding.textMrzDocNumber.text = "${mrz.documentNumber} ✓"
                     binding.textMrzDob.text = "${mrz.formattedDob()} ✓"
                     binding.textMrzExpiry.text = "${mrz.formattedExpiry()} ✓"
-                    binding.textMrzHolderName.text = "${mrz.primaryIdentifier} ${mrz.secondaryIdentifier}".trim()
                 }
             }
             AppStep.NFC_TAP -> {
@@ -324,6 +335,18 @@ class MainActivity : AppCompatActivity() {
         } else {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
+    }
+
+    private fun stopCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener({
+            try {
+                val cameraProvider = cameraProviderFuture.get()
+                cameraProvider.unbindAll()
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }, ContextCompat.getMainExecutor(this))
     }
 
     @OptIn(ExperimentalGetImage::class)
