@@ -93,4 +93,29 @@ class MrzAndNfcUnitTest {
         assertEquals("840829", bacSpec.dateOfBirth)
         assertEquals("311211", bacSpec.dateOfExpiry)
     }
+
+    @Test
+    fun testSixtyCharacterCoreMrzParsing() {
+        // Continuous 60-character stream (Line 1: 30 chars + Line 2: 30 chars)
+        val continuous60 = "IDIRQAZ94318824198405252409<<<8408299M3112113IRQ<<<<<<<<<<<9"
+        assertEquals(60, continuous60.length)
+
+        val mrzFromContinuous = MrzParser.parseTd1(listOf(continuous60))
+        assertNotNull(mrzFromContinuous)
+        assertEquals("AZ9431882", mrzFromContinuous!!.documentNumber)
+        assertEquals("840829", mrzFromContinuous.dateOfBirth)
+        assertEquals("311211", mrzFromContinuous.expiryDate)
+        assertTrue(mrzFromContinuous.isDocumentNumberValid)
+        assertTrue(mrzFromContinuous.isDateOfBirthValid)
+        assertTrue(mrzFromContinuous.isExpiryDateValid)
+
+        // 2 separate 30-character lines (60 characters total)
+        val l1 = "IDIRQAZ94318824198405252409<<<"
+        val l2 = "8408299M3112113IRQ<<<<<<<<<<<9"
+        val mrzFrom2Lines = MrzParser.parseTd1(listOf(l1, l2))
+        assertNotNull(mrzFrom2Lines)
+        assertEquals("AZ9431882", mrzFrom2Lines!!.documentNumber)
+        assertEquals("840829", mrzFrom2Lines.dateOfBirth)
+        assertEquals("311211", mrzFrom2Lines.expiryDate)
+    }
 }

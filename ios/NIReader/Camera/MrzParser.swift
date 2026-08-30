@@ -71,9 +71,20 @@ public final class MrzParser {
     }
     
     public static func parseTd1(_ rawLines: [String]) -> MrzData? {
-        guard rawLines.count >= 3 else { return nil }
+        guard !rawLines.isEmpty else { return nil }
         
-        let lines = rawLines.map { sanitizeLine($0) }
+        var lines = rawLines.map { sanitizeLine($0) }.filter { !$0.isEmpty }
+
+        // If continuous string of 60+ chars (Line 1 + Line 2)
+        if lines.count == 1 && lines[0].count >= 60 {
+            let fullText = lines[0]
+            let l1 = String(fullText.prefix(30))
+            let l2 = String(fullText.dropFirst(30).prefix(30))
+            let l3 = fullText.count >= 90 ? String(fullText.dropFirst(60).prefix(30)) : "<<"
+            lines = [l1, l2, l3]
+        }
+
+        guard lines.count >= 2 else { return nil }
 
         // Strategy 1: Standard ICAO Doc 9303 TD1 parsing with padding
         if let standard = tryStandardParse(lines), (standard.isDocumentNumberValid || standard.isDateOfBirthValid || standard.isExpiryDateValid) {
@@ -85,14 +96,14 @@ public final class MrzParser {
             return anchor
         }
 
-        return tryStandardParse(lines)
+        return standard
     }
 
     private static func tryStandardParse(_ lines: [String]) -> MrzData? {
-        guard lines.count >= 3 else { return nil }
+        guard lines.count >= 2 else { return nil }
         var l1 = lines[0]
         var l2 = lines[1]
-        var l3 = lines[2]
+        var l3 = lines.count > 2 ? lines[2] : "<<"
         
         if l1.count < 30 { l1 = l1.padding(toLength: 30, withPad: "<", startingAt: 0) }
         if l2.count < 30 { l2 = l2.padding(toLength: 30, withPad: "<", startingAt: 0) }

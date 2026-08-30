@@ -54,12 +54,23 @@ object MrzParser {
     }
 
     /**
-     * Parses 3 lines of TD1 MRZ from the Iraqi National ID.
+     * Parses TD1 MRZ from the Iraqi National ID (accepts 60 characters / 2 core lines or full 3 lines).
      */
     fun parseTd1(rawLines: List<String>): MrzData? {
-        if (rawLines.size < 3) return null
+        if (rawLines.isEmpty()) return null
 
-        val lines = rawLines.map { sanitizeLine(it) }
+        var lines = rawLines.map { sanitizeLine(it) }.filter { it.isNotBlank() }
+        
+        // If passed a single continuous string of 60+ chars (e.g. Line1 + Line2)
+        if (lines.size == 1 && lines[0].length >= 60) {
+            val fullText = lines[0]
+            val l1 = fullText.substring(0, 30)
+            val l2 = fullText.substring(30, 60)
+            val l3 = if (fullText.length >= 90) fullText.substring(60, 90) else "<<"
+            lines = listOf(l1, l2, l3)
+        }
+
+        if (lines.size < 2) return null
 
         // Strategy 1: Standard index-based parse
         val standard = tryStandardParse(lines)
@@ -80,7 +91,7 @@ object MrzParser {
         try {
             var line1 = lines[0]
             var line2 = lines[1]
-            var line3 = lines[2]
+            var line3 = if (lines.size > 2) lines[2] else "<<"
 
             if (line1.length < 30) line1 = line1.padEnd(30, '<')
             if (line2.length < 30) line2 = line2.padEnd(30, '<')
