@@ -189,6 +189,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         addDebugLog("Manual BAC key configured. Ready for NFC Tap: Doc=$docNum, DOB=$dob, Exp=$expiry")
     }
 
+    fun onMrzExtractedDirectly(mrz: MrzData) {
+        addDebugLog("Direct Live MRZ detected: Doc=${mrz.documentNumber}, DOB=${mrz.dateOfBirth}, Exp=${mrz.expiryDate}")
+        _uiState.update {
+            it.copy(
+                mrzData = mrz,
+                currentStep = AppStep.MRZ_CONFIRMATION,
+                statusMessage = "تمت قراءة وتدقيق الـ MRZ بنجاح ✓"
+            )
+        }
+    }
+
     fun onFrontImageCaptured(bitmap: Bitmap) {
         frontBase64 = ImageUtils.bitmapToBase64(bitmap)
         _uiState.update {

@@ -82,58 +82,54 @@ class IraqiIdNfcReader {
             passportService.open()
 
             var authProtocol = "BAC"
-            var isPaceSucceeded = false
+            var isAuthSucceeded = false
+            val bacKey = authKey.toBacKeySpec()
 
-            // 1. Check for PACE (Password Authenticated Connection Establishment)
+            // 1. Prioritize direct BAC on Iraqi National ID eMRTD applet
             try {
-                val cardAccessFile = CardAccessFile(passportService.getInputStream(PassportService.EF_CARD_ACCESS))
-                val securityInfos = cardAccessFile.securityInfos
-                if (securityInfos != null && securityInfos.isNotEmpty()) {
-                    for (secInfo in securityInfos) {
-                        if (secInfo is PACEInfo) {
-                            try {
+                emit(NfcReadStatus.Authenticating("BAC"))
+                passportService.sendSelectApplet(false)
+                passportService.doBAC(bacKey)
+                authProtocol = "BAC"
+                isAuthSucceeded = true
+            } catch (bacException: Exception) {
+                // If BAC fails or card requires PACE, attempt PACE fallback
+                try {
+                    val cardAccessFile = CardAccessFile(passportService.getInputStream(PassportService.EF_CARD_ACCESS))
+                    val securityInfos = cardAccessFile.securityInfos
+                    if (securityInfos != null && securityInfos.isNotEmpty()) {
+                        for (secInfo in securityInfos) {
+                            if (secInfo is PACEInfo) {
                                 emit(NfcReadStatus.Authenticating("PACE (${secInfo.protocolOIDString})"))
-                                val bacKeySpec = authKey.toBacKeySpec()
                                 passportService.doPACE(
-                                    bacKeySpec,
+                                    bacKey,
                                     secInfo.objectIdentifier,
                                     PACEInfo.toParameterSpec(secInfo.parameterId),
                                     null
                                 )
                                 authProtocol = "PACE"
-                                isPaceSucceeded = true
+                                isAuthSucceeded = true
                                 break
-                            } catch (e: Exception) {
-                                // Fallback to BAC
                             }
                         }
                     }
+                } catch (paceException: Exception) {
+                    // PACE also failed
                 }
-            } catch (e: Exception) {
-                // CardAccess not present, fallback to BAC
-            }
 
-            // 2. Perform BAC if PACE was not executed or failed
-            if (!isPaceSucceeded) {
-                emit(NfcReadStatus.Authenticating("BAC"))
-                val bacKey = authKey.toBacKeySpec()
-                try {
-                    passportService.sendSelectApplet(false)
-                    passportService.doBAC(bacKey)
-                    authProtocol = "BAC"
-                } catch (e: Exception) {
-                    val msg = e.message.orEmpty()
+                if (!isAuthSucceeded) {
+                    val msg = bacException.message.orEmpty()
                     val isAuthFail = msg.contains("6982") || msg.contains("6300") || msg.contains("BAC") || msg.contains("Security")
                     emit(
                         NfcReadStatus.Error(
                             message = if (isAuthFail) {
-                                "فشلت المصادقة الأمنية (BAC)! يرجى التحقق من أرقام الـ MRZ المدخلة والمحاولة مرة أخرى."
+                                "فشلت المصادقة الأمنية (BAC)! الأرقام المدخلة غير مطابقة لمفتاح تشفير الشريحة. تحقق من رقم الوثيقة وتاريخ الميلاد."
                             } else {
-                                "خطأ أثناء مصادقة BAC: ${e.localizedMessage}"
+                                "خطأ مصادقة الشريحة: ${bacException.localizedMessage ?: bacException.javaClass.simpleName}"
                             },
                             isAuthFailure = isAuthFail,
                             failurePhase = "BAC_AUTH",
-                            throwable = e
+                            throwable = bacException
                         )
                     )
                     return@flow

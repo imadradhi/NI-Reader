@@ -30,6 +30,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.iraq.nireader.R
 import com.iraq.nireader.data.model.VerificationStatus
+import com.iraq.nireader.data.ocr.MrzOcrDetector
 import com.iraq.nireader.data.ocr.MrzParser
 import com.iraq.nireader.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private var analyzerExecutor: ExecutorService? = null
     private var imageCapture: ImageCapture? = null
     private val liveTextRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private val ocrDetector = MrzOcrDetector()
 
     private val isCapturing = AtomicBoolean(false)
     private var consecutiveDetectionCount = 0
@@ -115,6 +117,7 @@ class MainActivity : AppCompatActivity() {
         cameraExecutor?.shutdown()
         analyzerExecutor?.shutdown()
         liveTextRecognizer.close()
+        ocrDetector.close()
     }
 
     private fun setupListeners() {
@@ -377,7 +380,35 @@ class MainActivity : AppCompatActivity() {
 
         var isCardTargetDetected = false
 
-        if (currentStep == AppStep.CAMERA_FRONT) {
+        if (currentStep == AppStep.CAMERA_BACK) {
+            val directMrz = ocrDetector.extractMrzFromText(visionText)
+            if (directMrz != null) {
+                if (isCapturing.compareAndSet(false, true)) {
+                    runOnUiThread {
+                        triggerHapticFeedback()
+                        binding.cardFrameOverlay.setBackgroundResource(R.drawable.bg_card_frame_active)
+                        binding.textAutoCaptureStatus.text = "تم مسح الـ MRZ بنجاح ✓"
+                        viewModel.onMrzExtractedDirectly(directMrz)
+                    }
+                }
+                return
+            }
+
+            // Secondary check: live check for TD1 candidate lines
+            val candidateLines = mutableListOf<String>()
+            for (block in visionText.textBlocks) {
+                for (line in block.lines) {
+                    val cleaned = MrzParser.sanitizeLine(line.text)
+                    if (cleaned.length >= 15 && (cleaned.contains("<") || cleaned.startsWith("I") || cleaned.contains("IRQ"))) {
+                        candidateLines.add(cleaned)
+                    }
+                }
+            }
+
+            if (candidateLines.size >= 2) {
+                isCardTargetDetected = true
+            }
+        } else if (currentStep == AppStep.CAMERA_FRONT) {
             // Front side detection: Check for ID text elements, multiple structured text blocks
             val totalBlocks = visionText.textBlocks.size
             val fullText = visionText.text.uppercase()
@@ -388,32 +419,13 @@ class MainActivity : AppCompatActivity() {
             if (totalBlocks >= 2 && hasIdKeywords) {
                 isCardTargetDetected = true
             }
-        } else if (currentStep == AppStep.CAMERA_BACK) {
-            // Back side detection: Live check for TD1 MRZ lines
-            val candidateLines = mutableListOf<String>()
-            for (block in visionText.textBlocks) {
-                for (line in block.lines) {
-                    val cleaned = MrzParser.sanitizeLine(line.text)
-                    if (cleaned.length in 25..35 && (cleaned.contains("<") || cleaned.startsWith("I") || cleaned.contains("IRQ"))) {
-                        candidateLines.add(cleaned)
-                    }
-                }
-            }
-
-            if (candidateLines.size >= 2) {
-                val hasMrzHeader = candidateLines.any { it.startsWith("I") && it.contains("IRQ") }
-                val hasChevrons = candidateLines.any { it.contains("<<") || it.contains("<") }
-                if (hasMrzHeader || hasChevrons || candidateLines.size >= 3) {
-                    isCardTargetDetected = true
-                }
-            }
         }
 
         if (isCardTargetDetected) {
             consecutiveDetectionCount++
             runOnUiThread {
                 binding.cardFrameOverlay.setBackgroundResource(R.drawable.bg_card_frame_active)
-                binding.textAutoCaptureStatus.text = "Auto-Capture: Card Locked ✓"
+                binding.textAutoCaptureStatus.text = "تم قفل الإطار على البطاقة ✓"
             }
 
             // Require 2 consecutive positive detections to ensure steady position
@@ -423,9 +435,9 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         triggerHapticFeedback()
                         binding.textCameraPrompt.text = if (currentStep == AppStep.CAMERA_FRONT) {
-                            "Front Side Detected ✓ Capturing..."
+                            "تم التقاط الواجهة الأمامية ✓"
                         } else {
-                            "MRZ Detected ✓ Capturing..."
+                            "تم التقاط الـ MRZ ✓"
                         }
                         captureCameraImage()
                     }
@@ -435,7 +447,7 @@ class MainActivity : AppCompatActivity() {
             consecutiveDetectionCount = 0
             runOnUiThread {
                 binding.cardFrameOverlay.setBackgroundResource(R.drawable.bg_card_frame)
-                binding.textAutoCaptureStatus.text = "Auto-Capture: Align Card..."
+                binding.textAutoCaptureStatus.text = "وجه الكاميرا نحو البطاقة..."
             }
         }
     }

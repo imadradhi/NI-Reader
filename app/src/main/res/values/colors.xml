@@ -6,6 +6,7 @@
     <color name="primary_light">#E0F2EB</color>
     <color name="secondary">#D4AF37</color>
     <color name="secondary_variant">#AA8520</color>
+    <color name="ic_launcher_background">#155D93</color>
 
     <!-- Neutral & Backgrounds -->
     <color name="bg_dark">#0F172A</color>

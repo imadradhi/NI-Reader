@@ -37,39 +37,57 @@ class MrzOcrDetector {
     }
 
     /**
-     * Scans through recognized text blocks and lines to find 3 consecutive lines of ~30 characters.
+     * Scans through recognized text blocks and lines to find valid TD1 MRZ lines.
      */
-    private fun extractMrzFromText(visionText: Text): MrzData? {
-        val candidateLines = mutableListOf<String>()
+    fun extractMrzFromText(visionText: Text): MrzData? {
+        val allLines = mutableListOf<String>()
 
         for (block in visionText.textBlocks) {
             for (line in block.lines) {
                 val cleaned = MrzParser.sanitizeLine(line.text)
-                // TD1 lines should have around 28-32 characters and contain '<' characters
-                if (cleaned.length in 25..35 && (cleaned.contains("<") || cleaned.startsWith("I") || cleaned.contains("IRQ"))) {
-                    candidateLines.add(cleaned)
+                if (cleaned.isNotEmpty()) {
+                    allLines.add(cleaned)
+                }
+            }
+            // Also split block text by newline if ML Kit merged lines
+            val blockSplit = block.text.split("\n")
+            for (line in blockSplit) {
+                val cleaned = MrzParser.sanitizeLine(line)
+                if (cleaned.isNotEmpty() && !allLines.contains(cleaned)) {
+                    allLines.add(cleaned)
                 }
             }
         }
 
-        // Try every contiguous 3-line combination
+        // Filter candidate MRZ lines (any line with IRQ, chevrons, or length >= 15)
+        val candidateLines = allLines.filter { line ->
+            line.contains("<") || line.contains("IRQ") || line.startsWith("I") || line.length in 15..35
+        }
+
+        // Strategy A: Direct parsing if 3 candidate lines exist
         if (candidateLines.size >= 3) {
             for (i in 0..(candidateLines.size - 3)) {
                 val threeLines = listOf(candidateLines[i], candidateLines[i + 1], candidateLines[i + 2])
                 val parsed = MrzParser.parseTd1(threeLines)
-                if (parsed != null && (parsed.isDocumentNumberValid || parsed.isDateOfBirthValid)) {
+                if (parsed != null) {
                     return parsed
                 }
             }
         }
 
-        // Fallback: search for specific line prefixes if jumbled
-        val line1 = candidateLines.firstOrNull { it.startsWith("I") && it.contains("IRQ") }
-        val line2 = candidateLines.firstOrNull { it != line1 && it.length >= 28 && it.contains("IRQ") }
-        val line3 = candidateLines.firstOrNull { it != line1 && it != line2 && it.contains("<<") }
+        // Strategy B: Anchor-based matching among all lines
+        val line1 = allLines.firstOrNull { it.contains("IRQ") && (it.startsWith("I") || it.contains("<") || it.length >= 15) }
+        val line2 = allLines.firstOrNull { it != line1 && it.length >= 14 && MrzParser.sanitizeNumericField(it).length >= 12 }
+        val line3 = allLines.firstOrNull { it != line1 && it != line2 && (it.contains("<<") || it.contains("<")) }
 
-        if (line1 != null && line2 != null && line3 != null) {
-            val parsed = MrzParser.parseTd1(listOf(line1, line2, line3))
+        if (line1 != null && line2 != null) {
+            val parsed = MrzParser.parseTd1(listOf(line1, line2, line3 ?: "HOLDER<<NAME"))
+            if (parsed != null) return parsed
+        }
+
+        // Strategy C: Try full candidate lines list directly
+        if (candidateLines.isNotEmpty()) {
+            val parsed = MrzParser.parseTd1(candidateLines)
             if (parsed != null) return parsed
         }
 
