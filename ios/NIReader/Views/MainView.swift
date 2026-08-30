@@ -32,6 +32,8 @@ public struct MainView: View {
                         fullScreenWelcomeView
                     case .cameraFront, .cameraBack:
                         fullScreenCameraView
+                    case .mrzConfirmation:
+                        mrzConfirmationView
                     case .nfcTap:
                         fullScreenNfcTapView
                     case .verification, .sending, .success:
@@ -216,7 +218,99 @@ public struct MainView: View {
         }
     }
     
-    // MARK: - Step 2: Full-Screen Camera View with Futuristic HUD
+    // MARK: - MRZ Confirmation Review View
+    private var mrzConfirmationView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            
+            // Checkmark Icon
+            ZStack {
+                Circle()
+                    .fill(Color.neonEmerald.opacity(0.15))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(.neonEmerald)
+            }
+            
+            Text("تمت قراءة وتدقيق الـ MRZ بنجاح ✓")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.white)
+            
+            Text("يرجى مراجعة البيانات قبل البدء بقراءة الشريحة الإلكترونية")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+            
+            // Info Card
+            VStack(spacing: 14) {
+                if let mrz = viewModel.mrzData {
+                    infoRow(label: "اسم حامل الهوية", value: "\(mrz.primaryIdentifier) \(mrz.secondaryIdentifier)".trimmingCharacters(in: .whitespaces))
+                    Divider().background(Color.white.opacity(0.1))
+                    infoRow(label: "رقم الوثيقة", value: "\(mrz.documentNumber) ✓")
+                    Divider().background(Color.white.opacity(0.1))
+                    infoRow(label: "تاريخ الميلاد", value: "\(mrz.dateOfBirth) ✓")
+                    Divider().background(Color.white.opacity(0.1))
+                    infoRow(label: "تاريخ النفاذ", value: "\(mrz.expiryDate) ✓")
+                }
+            }
+            .padding(18)
+            .background(Color(red: 0.12, green: 0.14, blue: 0.22).opacity(0.9))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+            
+            Spacer()
+            
+            // Action Buttons
+            VStack(spacing: 12) {
+                Button(action: { viewModel.proceedToNfc() }) {
+                    HStack {
+                        Text("استمر لقراءة NFC ➔")
+                            .font(.system(size: 16, weight: .bold))
+                        Image(systemName: "wave.3.right")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(Color.neonEmerald)
+                    .cornerRadius(14)
+                    .shadow(color: Color.neonEmerald.opacity(0.4), radius: 10, y: 4)
+                }
+                
+                Button(action: { viewModel.rescanMrz() }) {
+                    Text("إعادة مسح الكاميرا")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Color.white.opacity(0.06))
+                        .cornerRadius(12)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+    }
+    
+    private func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label + ":")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.gray)
+            Spacer()
+            Text(value.isEmpty ? "غير متوفر" : value)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(.white)
+        }
+    }
+    
+    // MARK: - Full Screen Camera View with Futuristic HUD
     private var fullScreenCameraView: some View {
         ZStack {
             CameraPreviewView(session: viewModel.cameraManager.getCaptureSession())

@@ -6,6 +6,7 @@ public enum AppStepIOS {
     case idle
     case cameraFront
     case cameraBack
+    case mrzConfirmation
     case nfcTap
     case verification
     case sending
@@ -41,12 +42,11 @@ public final class MainViewModelIOS: ObservableObject {
     private var frontBase64: String? = nil
     private var backBase64: String? = nil
     private var chipFaceBase64: String? = nil
-    private var isNfcScanTriggered = false
     
     public init() {
         setupCallbacks()
-        checkHealth()
         refreshNfcStatus()
+        addLog("App running in Standalone Offline Mode (iOS)")
     }
     
     public func refreshNfcStatus() {
@@ -66,17 +66,13 @@ public final class MainViewModelIOS: ObservableObject {
         cameraManager.onMrzLinesDetected = { [weak self] lines in
             guard let self = self else { return }
             DispatchQueue.main.async {
-                guard self.currentStep == .cameraBack, !self.isNfcScanTriggered else { return }
+                guard self.currentStep == .cameraBack else { return }
                 if let parsed = MrzParser.parseTd1(lines) {
-                    self.isNfcScanTriggered = true
                     self.mrzData = parsed
                     self.cameraManager.stopSession()
-                    self.currentStep = .nfcTap
-                    self.statusMessage = "Hold iPhone near NFC chip on card back"
-                    self.addLog("MRZ Recognized: Doc=\(parsed.documentNumber), DOB=\(parsed.dateOfBirth). Launching NFC...")
-                    
-                    let authKey = NfcAuthKey(documentNumber: parsed.documentNumber, dateOfBirth: parsed.dateOfBirth, expiryDate: parsed.expiryDate)
-                    self.nfcReader.startReading(authKey: authKey)
+                    self.currentStep = .mrzConfirmation
+                    self.statusMessage = "MRZ read successfully. Please verify information."
+                    self.addLog("MRZ Recognized: Doc=\(parsed.documentNumber), DOB=\(parsed.dateOfBirth), Exp=\(parsed.expiryDate)")
                 }
             }
         }
@@ -101,17 +97,33 @@ public final class MainViewModelIOS: ObservableObject {
         }
     }
     
+    public func proceedToNfc() {
+        guard let mrz = self.mrzData else { return }
+        self.currentStep = .nfcTap
+        self.statusMessage = "Hold top of iPhone near NFC chip on card back"
+        self.addLog("Proceeding to NFC with BAC Key: Doc=\(mrz.documentNumber), DOB=\(mrz.dateOfBirth)")
+        
+        let authKey = NfcAuthKey(documentNumber: mrz.documentNumber, dateOfBirth: mrz.dateOfBirth, expiryDate: mrz.expiryDate)
+        self.nfcReader.startReading(authKey: authKey)
+    }
+    
+    public func rescanMrz() {
+        startScanningFlow()
+    }
+    
+    public func cancelScanning() {
+        cameraManager.stopSession()
+        nfcReader.invalidate()
+        currentStep = .idle
+        statusMessage = "Ready to scan National ID card"
+        errorMessage = nil
+    }
+    
     public func checkHealth() {
-        apiClient.checkHealth { [weak self] isHealthy in
-            DispatchQueue.main.async {
-                self?.isApiConnected = isHealthy
-                self?.addLog("Desktop API Health Check: \(isHealthy ? "ONLINE" : "OFFLINE")")
-            }
-        }
+        // Disabled for offline mode
     }
     
     public func startScanningFlow() {
-        isNfcScanTriggered = false
         nfcReader.invalidate()
         currentStep = .cameraBack
         cameraManager.currentStep = 2

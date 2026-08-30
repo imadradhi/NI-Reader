@@ -9,9 +9,14 @@ public struct NfcAuthKey {
     public let expiryDate: String
     
     public init(documentNumber: String, dateOfBirth: String, expiryDate: String) {
-        self.documentNumber = documentNumber.replacingOccurrences(of: "<", with: "").trimmingCharacters(in: .whitespaces)
-        self.dateOfBirth = dateOfBirth.replacingOccurrences(of: "<", with: "").trimmingCharacters(in: .whitespaces)
-        self.expiryDate = expiryDate.replacingOccurrences(of: "<", with: "").trimmingCharacters(in: .whitespaces)
+        let cleanDoc = documentNumber.replacingOccurrences(of: "<", with: "").replacingOccurrences(of: " ", with: "").trimmingCharacters(in: .whitespaces).uppercased()
+        self.documentNumber = cleanDoc.count < 9 ? cleanDoc.padding(toLength: 9, withPad: "<", startingAt: 0) : String(cleanDoc.prefix(9))
+        
+        let rawDob = dateOfBirth.replacingOccurrences(of: "-", with: "").replacingOccurrences(of: "/", with: "").replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "<", with: "").trimmingCharacters(in: .whitespaces)
+        self.dateOfBirth = rawDob.count == 8 ? String(rawDob.dropFirst(2).prefix(6)) : (rawDob.count >= 6 ? String(rawDob.prefix(6)) : rawDob.padding(toLength: 6, withPad: "0", startingAt: 0))
+        
+        let rawExp = expiryDate.replacingOccurrences(of: "-", with: "").replacingOccurrences(of: "/", with: "").replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "<", with: "").trimmingCharacters(in: .whitespaces)
+        self.expiryDate = rawExp.count == 8 ? String(rawExp.dropFirst(2).prefix(6)) : (rawExp.count >= 6 ? String(rawExp.prefix(6)) : rawExp.padding(toLength: 6, withPad: "0", startingAt: 0))
     }
 }
 
