@@ -22,6 +22,7 @@ dependencies:
   
   # Camera & Image Processing
   camera: ^0.11.0+2
+  image_picker: ^1.1.2
   image: ^4.3.0
   
   # OCR

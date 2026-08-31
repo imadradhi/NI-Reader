@@ -28,6 +28,8 @@
 	<!-- Camera Permission -->
 	<key>NSCameraUsageDescription</key>
 	<string>يتطلب التطبيق الوصول إلى الكاميرا لمسح أسطر الـ MRZ والتقاط صور البطاقة الوطنية.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يتطلب التطبيق الوصول إلى المعرض لاختيار صورة البطاقة الوطنية.</string>
 	
 	<!-- NFC Permissions & ISO 7816 AIDs -->
 	<key>NFCReaderUsageDescription</key>
