@@ -1,0 +1,42 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: ./flutter_ni_reader
+        run: flutter pub get
+
+      - name: Build iOS Application (No Codesign for Unsigned IPA)
+        working-directory: ./flutter_ni_reader
+        run: |
+          flutter build ios --release --no-codesign
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -r Iraqi-ID-Reader.ipa Payload
+          mv Iraqi-ID-Reader.ipa ../../../
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Iraqi-ID-Reader-iOS-IPA
+          path: flutter_ni_reader/Iraqi-ID-Reader.ipa
+          if-no-files-found: error

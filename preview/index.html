@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>معاينة تفاعلية لتطبيق قارئ البطاقة الوطنية العراقية (Flutter NI-Reader)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0A0E17;
+            --surface-dark: #1E293B;
+            --surface-card: #273549;
+            --primary: #0B6E4F;
+            --neon-emerald: #10B981;
+            --neon-cyan: #00E5FF;
+            --neon-gold: #D4AF37;
+            --neon-coral: #EF4444;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --border-dark: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: radial-gradient(circle at top right, #0F1D18, #0A0E17 80%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            color: var(--text-primary);
+        }
+
+        .showcase-container {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            max-width: 1250px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            flex: 1;
+            min-width: 340px;
+            max-width: 460px;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-dark);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        .controls-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--neon-emerald);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .step-tabs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .step-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-dark);
+            color: var(--text-primary);
+            padding: 14px 18px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: right;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .step-btn:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--neon-emerald);
+        }
+
+        .step-btn.active {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(11, 110, 79, 0.4));
+            border-color: var(--neon-emerald);
+            color: var(--neon-emerald);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-step {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--surface-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            border: 1px solid var(--border-dark);
+        }
+
+        .step-btn.active .badge-step {
+            background: var(--neon-emerald);
+            color: #000;
+            font-weight: 900;
+            border-color: var(--neon-emerald);
+        }
+
+        /* Mock Phone Device Frame */
+        .phone-mockup {
+            width: 380px;
+            height: 780px;
+            background: #000;
+            border-radius: 48px;
+            padding: 12px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 0 4px #263238, 0 0 35px rgba(16, 185, 129, 0.15);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            border-radius: 38px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Status Bar */
+        .phone-status-bar {
+            height: 38px;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-dark);
+            z-index: 50;
+        }
+
+        .notch {
+            width: 100px;
+            height: 22px;
+            background: #000;
+            border-radius: 0 0 16px 16px;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+        }
+
+        /* App Views Container */
+        .app-view {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            padding: 16px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .app-view.active {
+            display: flex;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* View 1: Home Dashboard */
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-dark);
+        }
+
+        .app-logo-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 900;
+            font-size: 16px;
+        }
+
+        .pulsing-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid var(--neon-emerald);
+            border-radius: 20px;
+            font-size: 11px;
+            color: var(--neon-emerald);
+            font-weight: 700;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--neon-emerald);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--neon-emerald);
+            animation: pulseAnim 1.4s infinite;
+        }
+
+        @keyframes pulseAnim {
+            0% { transform: scale(0.9); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.5; }
+            100% { transform: scale(0.9); opacity: 1; }
+        }
+
+        .hero-banner {
+            background: linear-gradient(145deg, #0F2B20 0%, #121E29 100%);
+            border: 1.5px solid rgba(16, 185, 129, 0.4);
+            border-radius: 20px;
+            padding: 24px 18px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 15px 30px rgba(11, 110, 79, 0.25);
+        }
+
+        .hero-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1.5px solid var(--neon-emerald);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+            font-size: 26px;
+            color: var(--neon-emerald);
+        }
+
+        .primary-action-btn {
+            background: var(--neon-emerald);
+            color: #000;
+            border: none;
+            padding: 14px;
+            width: 100%;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            transition: 0.2s;
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+        }
+
+        .primary-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        /* View 2 & 3: Camera HUD & OCR */
+        .camera-container {
+            flex: 1;
+            background: #000;
+            border-radius: 18px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border: 1px solid var(--border-dark);
+        }
+
+        .hud-card-guide {
+            width: 86%;
+            height: 58%;
+            border: 1.5px solid rgba(16, 185, 129, 0.4);
+            border-radius: 14px;
+            position: relative;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.65);
+        }
+
+        .hud-corner {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-color: var(--neon-emerald);
+            border-style: solid;
+            border-width: 0;
+        }
+
+        .hud-tl { top: -2px; left: -2px; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 8px; }
+        .hud-tr { top: -2px; right: -2px; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 8px; }
+        .hud-bl { bottom: -2px; left: -2px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 8px; }
+        .hud-br { bottom: -2px; right: -2px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 8px; }
+
+        .laser-scan-line {
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), var(--neon-emerald), transparent);
+            box-shadow: 0 0 10px var(--neon-cyan);
+            position: absolute;
+            top: 10%;
+            animation: laserMove 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes laserMove {
+            0% { top: 10%; }
+            100% { top: 90%; }
+        }
+
+        .mrz-detected-box {
+            position: absolute;
+            bottom: 20px;
+            left: 14px;
+            right: 14px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--neon-cyan);
+            border-radius: 10px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 1px;
+            color: var(--neon-cyan);
+            line-height: 1.5;
+            text-align: left;
+            direction: ltr;
+        }
+
+        /* View 4: NFC Scanner */
+        .nfc-scan-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .radar-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid var(--neon-emerald);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 54px;
+            color: var(--neon-emerald);
+            position: relative;
+            margin-bottom: 28px;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+        }
+
+        .radar-wave {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--neon-emerald);
+            animation: radarWave 2s infinite;
+        }
+
+        @keyframes radarWave {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.7); opacity: 0; }
+        }
+
+        .dg-progress-list {
+            width: 100%;
+            background: var(--surface-dark);
+            border-radius: 12px;
+            border: 1px solid var(--border-dark);
+            padding: 12px 16px;
+            margin-top: 20px;
+            text-align: right;
+            font-size: 12px;
+        }
+
+        .dg-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dg-item:last-child { border-bottom: none; }
+
+        /* View 5: Verification Report */
+        .verdict-badge {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1.5px solid var(--neon-emerald);
+            padding: 14px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .personal-card {
+            background: var(--surface-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 14px;
+            padding: 14px;
+            display: flex;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .face-avatar {
+            width: 75px;
+            height: 95px;
+            background: #000;
+            border-radius: 8px;
+            border: 1px solid var(--neon-emerald);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--neon-emerald);
+            font-size: 28px;
+        }
+
+        .table-check-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+<div class="showcase-container">
+
+    <!-- Left Controls Panel -->
+    <div class="controls-panel">
+        <div class="controls-title">
+            <span>⚡ المعاينة التفاعلية لتطبيق Flutter</span>
+        </div>
+        <p class="controls-desc">
+            جرّب شاشات وتدفق قارئ البطاقة الوطنية العراقية كاملة (من الكاميرا والـ OCR حتى قراءة شريحة الـ NFC والمطابقة وإرسال البيانات للحاسوب):
+        </p>
+
+        <div class="step-tabs">
+            <button class="step-btn active" onclick="switchStep(1)">
+                <span>1. الشاشة الرئيسية والاتصال (Home)</span>
+                <span class="badge-step">1</span>
+            </button>
+            <button class="step-btn" onclick="switchStep(2)">
+                <span>2. تصوير الوجه الأمامي (Front Capture)</span>
+                <span class="badge-step">2</span>
+            </button>
+            <button class="step-btn" onclick="switchStep(3)">
+                <span>3. مسح الـ MRZ والوجه الخلفي (OCR Scan)</span>
+                <span class="badge-step">3</span>
+            </button>
+            <button class="step-btn" onclick="switchStep(4)">
+                <span>4. قراءة الشريحة الذكية (NFC Radar)</span>
+                <span class="badge-step">4</span>
+            </button>
+            <button class="step-btn" onclick="switchStep(5)">
+                <span>5. تقرير التحقق النهائي (Verification & API)</span>
+                <span class="badge-step">5</span>
+            </button>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 12px; border: 1px solid var(--border-dark); font-size: 12px;">
+            <div style="color: var(--neon-gold); font-weight: 700; margin-bottom: 4px;">📌 مزايا الواجهة في Flutter:</div>
+            <div style="color: var(--text-secondary); line-height: 1.5;">
+                • تدعم نظام RTL والعربية بالكامل.<br>
+                • تصميم Dark Luxury بظلال Glassmorphic حديثة.<br>
+                • جاهزة للتصدير كـ <strong>APK</strong> و <strong>IPA</strong>.
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone Simulator Frame -->
+    <div class="phone-mockup">
+        <div class="notch"></div>
+        <div class="phone-screen">
+            <!-- Status Bar -->
+            <div class="phone-status-bar">
+                <span>09:41</span>
+                <span>5G 📶 100% 🔋</span>
+            </div>
+
+            <!-- VIEW 1: HOME -->
+            <div class="app-view active" id="view-1">
+                <div class="header-bar">
+                    <div class="app-logo-title">
+                        <span style="color: var(--neon-emerald);">💳</span>
+                        <span>قارئ البطاقة الموحدة</span>
+                    </div>
+                    <div class="pulsing-pill">
+                        <div class="pulse-dot"></div>
+                        <span>متصل بالحاسوب</span>
+                    </div>
+                </div>
+
+                <div class="hero-banner">
+                    <div class="hero-icon">📸</div>
+                    <h3 style="font-size: 18px; margin-bottom: 6px;">دورة القراءة والتحقق الكاملة</h3>
+                    <p style="font-size: 12px; color: var(--text-secondary);">
+                        التقاط الوجهين (OCR) + قراءة شريحة الـ NFC والمطابقة وإرسال البيانات
+                    </p>
+                    <button class="primary-action-btn" onclick="switchStep(2)">
+                        <span>بدء قراءة البطاقة</span>
+                        <span>←</span>
+                    </button>
+                </div>
+
+                <div style="background: var(--surface-dark); border-radius: 14px; padding: 16px; border: 1px solid var(--border-dark); margin-bottom: 12px; cursor: pointer;" onclick="switchStep(4)">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 24px; color: var(--neon-gold);">📡</span>
+                        <div>
+                            <div style="font-weight: 700; font-size: 14px;">قراءة NFC المباشرة (BAC)</div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">إدخال المفاتيح واختبار الشريحة فوراً</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(39, 53, 73, 0.4); border-radius: 14px; padding: 14px; border: 1px solid var(--border-dark); font-size: 11px; color: var(--text-secondary); margin-top: auto;">
+                    🔒 Zero-Persistence: لا يتم تخزين أي صور أو بيانات شخصية محلياً في الهاتف.
+                </div>
+            </div>
+
+            <!-- VIEW 2: FRONT CAPTURE -->
+            <div class="app-view" id="view-2">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <div style="font-weight: 700; font-size: 15px;">تصوير الوجه الأمامي</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">ضع البطاقة داخل الإطار التوجيهي</div>
+                </div>
+
+                <div class="camera-container">
+                    <div class="hud-card-guide">
+                        <div class="hud-corner hud-tl"></div>
+                        <div class="hud-corner hud-tr"></div>
+                        <div class="hud-corner hud-bl"></div>
+                        <div class="hud-corner hud-br"></div>
+                        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.2); font-size: 40px;">
+                            🆔
+                        </div>
+                    </div>
+                </div>
+
+                <button class="primary-action-btn" onclick="switchStep(3)">
+                    <span>التقاط الوجه الأمامي ومتابعة</span>
+                </button>
+            </div>
+
+            <!-- VIEW 3: BACK MRZ OCR -->
+            <div class="app-view" id="view-3">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <div style="font-weight: 700; font-size: 15px; color: var(--neon-cyan);">مسح أسطر الـ MRZ (OCR)</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">جاري الكشف البصري وحساب الـ Check Digits</div>
+                </div>
+
+                <div class="camera-container">
+                    <div class="hud-card-guide">
+                        <div class="hud-corner hud-tl"></div>
+                        <div class="hud-corner hud-tr"></div>
+                        <div class="hud-corner hud-bl"></div>
+                        <div class="hud-corner hud-br"></div>
+                        <div class="laser-scan-line"></div>
+                    </div>
+                    <div class="mrz-detected-box">
+                        IDIRQAZ9431882&lt;8199503201234&lt;&lt;<br>
+                        9503206M3503201IRQ&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;2<br>
+                        AL&lt;&lt;MOUSAWI&lt;&lt;AHMED&lt;ALI&lt;MOHAMME
+                    </div>
+                </div>
+
+                <button class="primary-action-btn" onclick="switchStep(4)">
+                    <span>تم التعرف على MRZ - انتقال لـ NFC</span>
+                </button>
+            </div>
+
+            <!-- VIEW 4: NFC SCAN -->
+            <div class="app-view" id="view-4">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <div style="font-weight: 700; font-size: 15px; color: var(--neon-emerald);">قراءة الشريحة الإلكترونية (NFC)</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">مفتاح BAC: AZ9431882 | 950320 | 350320</div>
+                </div>
+
+                <div class="nfc-scan-area">
+                    <div class="radar-circle">
+                        <div class="radar-wave"></div>
+                        📡
+                    </div>
+                    <div style="font-weight: 700; font-size: 16px; margin-bottom: 6px;">قرّب البطاقة من ظهر الهاتف...</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">جاري استخراج المجموعات البيومترية</div>
+
+                    <div class="dg-progress-list">
+                        <div class="dg-item"><span>DG1 (MRZ Data)</span><span style="color: var(--neon-emerald);">✔ مكتمل</span></div>
+                        <div class="dg-item"><span>DG2 (Biometric Photo)</span><span style="color: var(--neon-emerald);">✔ مكتمل (96KB)</span></div>
+                        <div class="dg-item"><span>DG11 (Full Details)</span><span style="color: var(--neon-emerald);">✔ مكتمل</span></div>
+                        <div class="dg-item"><span>SOD (Digital Signature)</span><span style="color: var(--neon-emerald);">✔ موثق</span></div>
+                    </div>
+                </div>
+
+                <button class="primary-action-btn" onclick="switchStep(5)">
+                    <span>عرض تقرير المطابقة الشامل</span>
+                </button>
+            </div>
+
+            <!-- VIEW 5: VERIFICATION REPORT -->
+            <div class="app-view" id="view-5">
+                <div style="text-align: center; margin-bottom: 12px;">
+                    <div style="font-weight: 900; font-size: 16px;">تقرير المطابقة والتحقق النهائي</div>
+                </div>
+
+                <div class="verdict-badge">
+                    <span style="font-size: 26px; color: var(--neon-emerald);">✅</span>
+                    <div>
+                        <div style="font-weight: 900; font-size: 15px; color: var(--neon-emerald);">البطاقة أصلية ومطابقة (PASS)</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">تطابقت بيانات الـ OCR مع الشريحة بنجاح</div>
+                    </div>
+                </div>
+
+                <div class="personal-card">
+                    <div class="face-avatar">
+                        👤
+                        <span style="font-size: 8px; color: var(--text-muted); margin-top: 4px;">DG2 Chip</span>
+                    </div>
+                    <div style="flex: 1; font-size: 12px;">
+                        <div style="font-weight: 900; font-size: 15px; margin-bottom: 2px;">أحمد علي محمد الموسوي</div>
+                        <div style="color: var(--neon-gold); font-weight: 700; margin-bottom: 8px;">AHMED ALI MOHAMMED</div>
+                        <div style="color: var(--text-secondary);">الرقم الوطني: <strong>199503201234</strong></div>
+                        <div style="color: var(--text-secondary);">الميلاد: <strong>1995-03-20</strong> | الجنس: <strong>ذكر</strong></div>
+                        <div style="color: var(--text-secondary);">النفاذ: <strong>2035-03-20</strong> | <strong>عراقي</strong></div>
+                    </div>
+                </div>
+
+                <div style="background: var(--surface-dark); border-radius: 12px; border: 1px solid var(--border-dark); padding: 12px; margin-bottom: 16px;">
+                    <div style="font-weight: 700; font-size: 12px; color: var(--neon-cyan); margin-bottom: 8px;">نتائج فحص الحقول:</div>
+                    <div class="table-check-row"><span>رقم الهوية:</span><span style="color: var(--neon-emerald);">AZ9431882 (مطابق ✔)</span></div>
+                    <div class="table-check-row"><span>تاريخ الميلاد:</span><span style="color: var(--neon-emerald);">950320 (مطابق ✔)</span></div>
+                    <div class="table-check-row"><span>الاسم المطبوع:</span><span style="color: var(--neon-emerald);">100% تطابق ✔</span></div>
+                </div>
+
+                <button class="primary-action-btn" onclick="alert('تم إرسال حزمة الـ JSON بنجاح إلى سيرفر الحاسوب عبر REST API!')">
+                    <span>إرسال البيانات للحاسوب (USB/API)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchStep(stepNumber) {
+        // Update tabs
+        document.querySelectorAll('.step-btn').forEach((btn, index) => {
+            if (index + 1 === stepNumber) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Update phone views
+        document.querySelectorAll('.app-view').forEach((view, index) => {
+            if (index + 1 === stepNumber) {
+                view.classList.add('active');
+            } else {
+                view.classList.remove('active');
+            }
+        });
+    }
+</script>
+</body>
+</html>

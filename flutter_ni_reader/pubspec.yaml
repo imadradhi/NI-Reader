@@ -1,0 +1,47 @@
+name: flutter_ni_reader
+description: "Iraqi National ID Reader - Flutter Application (Cross-Platform Android & iOS)"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  # State Management & DI
+  provider: ^6.1.2
+  
+  # UI & Animations & Icons
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+  
+  # Camera & Image Processing
+  camera: ^0.11.0+2
+  image: ^4.3.0
+  
+  # OCR
+  google_mlkit_text_recognition: ^0.13.0
+  
+  # Networking & Serialization
+  dio: ^5.7.0
+  http: ^1.2.2
+  intl: ^0.19.0
+  
+  # Hardware & Platform
+  flutter_nfc_kit: ^3.4.2
+  ndef: ^0.3.1
+  path_provider: ^2.1.4
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
