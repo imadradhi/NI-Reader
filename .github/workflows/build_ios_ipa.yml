@@ -23,18 +23,25 @@ jobs:
       - name: Initialize & Configure iOS Project Structure
         working-directory: ./flutter_ni_reader
         run: |
-          # Backup custom Info.plist
+          # Backup custom Info.plist and Podfile
           cp ios/Runner/Info.plist /tmp/CustomInfo.plist || true
+          cp ios/Podfile /tmp/CustomPodfile || true
           
           # Generate standard Xcode project scaffolding
           flutter create . --platforms=ios --org com.iraq
           
           # Restore custom Info.plist with NFC & Camera permissions
           cp /tmp/CustomInfo.plist ios/Runner/Info.plist
+          
+          # Restore Podfile with iOS 14.0 deployment target
+          cp /tmp/CustomPodfile ios/Podfile
 
-      - name: Install Flutter Dependencies
+      - name: Install Dependencies
         working-directory: ./flutter_ni_reader
-        run: flutter pub get
+        run: |
+          flutter pub get
+          cd ios
+          pod install --repo-update || pod install
 
       - name: Build iOS Application (Unsigned IPA)
         working-directory: ./flutter_ni_reader
