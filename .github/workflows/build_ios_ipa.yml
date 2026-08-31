@@ -20,16 +20,28 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Dependencies
+      - name: Initialize & Configure iOS Project Structure
+        working-directory: ./flutter_ni_reader
+        run: |
+          # Backup custom Info.plist
+          cp ios/Runner/Info.plist /tmp/CustomInfo.plist || true
+          
+          # Generate standard Xcode project scaffolding
+          flutter create . --platforms=ios --org com.iraq
+          
+          # Restore custom Info.plist with NFC & Camera permissions
+          cp /tmp/CustomInfo.plist ios/Runner/Info.plist
+
+      - name: Install Flutter Dependencies
         working-directory: ./flutter_ni_reader
         run: flutter pub get
 
-      - name: Build iOS Application (No Codesign for Unsigned IPA)
+      - name: Build iOS Application (Unsigned IPA)
         working-directory: ./flutter_ni_reader
         run: |
           flutter build ios --release --no-codesign
           cd build/ios/iphoneos
-          mkdir Payload
+          mkdir -p Payload
           cp -r Runner.app Payload/
           zip -r Iraqi-ID-Reader.ipa Payload
           mv Iraqi-ID-Reader.ipa ../../../
