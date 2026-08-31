@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/mrz_data.dart';
 import '../../data/ocr/mrz_parser.dart';
 import '../../providers/app_state_provider.dart';
+import 'manual_key_dialog.dart';
 import 'nfc_scan_view.dart';
 import 'widgets/hud_overlay.dart';
 
@@ -26,6 +27,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
   List<CameraDescription> _cameras = [];
   bool _isCameraInitialized = false;
   bool _isProcessing = false;
+  bool _isPermissionDenied = false;
   String? _cameraErrorMessage;
   final TextRecognizer _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
@@ -46,32 +48,39 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return;
-    }
-    if (state == AppLifecycleState.inactive) {
-      _cameraController?.dispose();
-    } else if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed) {
       _initializeHardwareCamera();
+    } else if (state == AppLifecycleState.inactive) {
+      _cameraController?.dispose();
     }
   }
 
   Future<void> _initializeHardwareCamera() async {
     try {
-      // 1. Request camera permission
-      final status = await Permission.camera.request();
+      // 1. Check and request camera permission
+      PermissionStatus status = await Permission.camera.status;
+      if (!status.isGranted) {
+        status = await Permission.camera.request();
+      }
+
       if (!status.isGranted) {
         setState(() {
-          _cameraErrorMessage = "يرجى منح صلاحية استخدام الكاميرا لمسح البطاقة";
+          _isPermissionDenied = true;
+          _cameraErrorMessage = "يتطلب التطبيق إذن الكاميرا لمسح البطاقة والتعرف على أسطر الـ MRZ.";
         });
         return;
       }
+
+      setState(() {
+        _isPermissionDenied = false;
+        _cameraErrorMessage = null;
+      });
 
       // 2. Discover available device cameras
       _cameras = await availableCameras();
       if (_cameras.isEmpty) {
         setState(() {
-          _cameraErrorMessage = "لم يتم العثور على كاميرا في هذا الجهاز";
+          _cameraErrorMessage = "لم يتم العثور على مستشعر كاميرا متاح على هذا الجهاز.";
         });
         return;
       }
@@ -100,7 +109,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
     } catch (e) {
       if (mounted) {
         setState(() {
-          _cameraErrorMessage = "تعذر تشغيل الكاميرا العتادية: ${e.toString()}";
+          _cameraErrorMessage = "تعذر تشغيل الكاميرا: ${e.toString()}";
         });
       }
     }
@@ -235,27 +244,78 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
               color: const Color(0xFF0F172A),
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        widget.isFrontCapture ? Icons.badge_outlined : Icons.document_scanner,
-                        size: 64,
-                        color: AppColors.textMuted.withOpacity(0.4),
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: (_isPermissionDenied ? AppColors.neonCoral : AppColors.neonEmerald).withOpacity(0.15),
+                          border: Border.all(
+                            color: _isPermissionDenied ? AppColors.neonCoral : AppColors.neonEmerald,
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          _isPermissionDenied ? Icons.no_photography_outlined : Icons.camera_alt_outlined,
+                          size: 48,
+                          color: _isPermissionDenied ? AppColors.neonCoral : AppColors.neonEmerald,
+                        ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
                       Text(
-                        _cameraErrorMessage ?? "جاري تشغيل الكاميرا العتادية...",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                        _isPermissionDenied ? "صلاحية الكاميرا غير مفعلة" : "جاري تشغيل الكاميرا العتادية...",
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      if (_cameraErrorMessage != null) ...[
-                        const SizedBox(height: 16),
+                      const SizedBox(height: 8),
+                      Text(
+                        _cameraErrorMessage ?? "يرجى الانتظار بينما يتم تهيئة مستشعر الكاميرا...",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.5),
+                      ),
+                      const SizedBox(height: 24),
+                      if (_isPermissionDenied) ...[
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            await openAppSettings();
+                          },
+                          icon: const Icon(Icons.settings),
+                          label: const Text("فتح إعدادات الجهاز لمنح الإذن"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.neonEmerald,
+                            foregroundColor: Colors.black,
+                            minimumSize: const Size(double.infinity, 48),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const ManualKeyDialog(),
+                            );
+                          },
+                          icon: const Icon(Icons.edit_note),
+                          label: const Text("المتابعة بالإدخال اليدوي (بدون كاميرا)"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            minimumSize: const Size(double.infinity, 48),
+                            side: const BorderSide(color: AppColors.borderDark),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ] else if (_cameraErrorMessage != null) ...[
                         ElevatedButton.icon(
                           onPressed: _initializeHardwareCamera,
                           icon: const Icon(Icons.refresh),
-                          label: const Text("إعادة المحاولة"),
+                          label: const Text("إعادة محاولة التشغيل"),
                           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                         ),
                       ],
@@ -266,11 +326,12 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
             ),
 
           // 2. HUD Scanner Overlay Frame
-          HudOverlay(
-            title: title,
-            hint: hint,
-            isScanning: !widget.isFrontCapture,
-          ),
+          if (_isCameraInitialized)
+            HudOverlay(
+              title: title,
+              hint: hint,
+              isScanning: !widget.isFrontCapture,
+            ),
 
           // 3. Back Navigation Button
           Positioned(
@@ -283,39 +344,40 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
           ),
 
           // 4. Bottom Capture Controls
-          Positioned(
-            bottom: 36,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: _isProcessing
-                  ? const CircularProgressIndicator(color: AppColors.neonEmerald)
-                  : GestureDetector(
-                      onTap: _captureAndProcess,
-                      child: Container(
-                        width: 76,
-                        height: 76,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.surfaceDark,
-                          border: Border.all(color: AppColors.neonEmerald, width: 4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.neonEmerald.withOpacity(0.5),
-                              blurRadius: 16,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: AppColors.neonEmerald,
-                          size: 36,
+          if (_isCameraInitialized)
+            Positioned(
+              bottom: 36,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: _isProcessing
+                    ? const CircularProgressIndicator(color: AppColors.neonEmerald)
+                    : GestureDetector(
+                        onTap: _captureAndProcess,
+                        child: Container(
+                          width: 76,
+                          height: 76,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.surfaceDark,
+                            border: Border.all(color: AppColors.neonEmerald, width: 4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.neonEmerald.withOpacity(0.5),
+                                blurRadius: 16,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: AppColors.neonEmerald,
+                            size: 36,
+                          ),
                         ),
                       ),
-                    ),
+              ),
             ),
-          ),
         ],
       ),
     );

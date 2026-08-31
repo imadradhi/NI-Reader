@@ -41,11 +41,11 @@ class HomeView extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.preview_rounded, color: AppColors.neonEmerald),
-            tooltip: "المعاينة التفاعلية والمختبر",
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const InteractiveShowcaseView()),
+            icon: const Icon(Icons.settings_outlined, color: AppColors.textSecondary),
+            tooltip: "المواصفات وإدارة الأذونات",
+            onPressed: () => showDialog(
+              context: context,
+              builder: (_) => const SettingsDialog(),
             ),
           ),
         ],
