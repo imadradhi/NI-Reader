@@ -1,30 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../../providers/app_state_provider.dart';
 
-class SettingsDialog extends StatefulWidget {
+/// About & System Specifications Dialog (100% Offline eMRTD Engine)
+class SettingsDialog extends StatelessWidget {
   const SettingsDialog({super.key});
-
-  @override
-  State<SettingsDialog> createState() => _SettingsDialogState();
-}
-
-class _SettingsDialogState extends State<SettingsDialog> {
-  late TextEditingController _urlController;
-
-  @override
-  void initState() {
-    super.initState();
-    final provider = context.read<AppStateProvider>();
-    _urlController = TextEditingController(text: provider.serverUrl);
-  }
-
-  @override
-  void dispose() {
-    _urlController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,11 +27,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     color: AppColors.primary.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.settings_ethernet, color: AppColors.neonEmerald),
+                  child: const Icon(Icons.info_outline, color: AppColors.neonEmerald),
                 ),
                 const SizedBox(width: 12),
                 const Text(
-                  "إعدادات خادم الحاسوب (API)",
+                  "مواصفات النظام الأمني (Offline)",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -63,63 +42,48 @@ class _SettingsDialogState extends State<SettingsDialog> {
             ),
             const SizedBox(height: 16),
             const Text(
-              "عنوان الـ IP والمنفذ لتطبيق سطح المكتب المرتبط عبر كابل USB أو الشبكة المحلية:",
+              "يعمل هذا التطبيق كقارئ هوية ذكي ومستقل (Standalone eMRTD Reader) بدون اتصال بأي خوادم خارجية:",
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _urlController,
-              keyboardType: TextInputType.url,
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                labelText: "عنوان السيرفر (Base URL)",
-                hintText: "http://192.168.42.129:8080",
-                prefixIcon: const Icon(Icons.link, color: AppColors.neonEmerald),
-                filled: true,
-                fillColor: AppColors.bgDark,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.borderDark),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.neonEmerald),
-                ),
-              ),
-            ),
+            _buildSpecRow("المعيار الدولي:", "ICAO Doc 9303 (Parts 1-12)"),
+            _buildSpecRow("بروتوكولات الوصول:", "PACE (ECDH / AES) + BAC (3DES)"),
+            _buildSpecRow("طبقة الاتصال الفيزيائي:", "ISO/IEC 14443-4 Type A/B"),
+            _buildSpecRow("التحقق المشفر:", "Passive, Active, Chip Authentication"),
+            _buildSpecRow("سياسة الخصوصية:", "Zero-Persistence (تصفير الذاكرة الفوري)"),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("إلغاء", style: TextStyle(color: AppColors.textMuted)),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () {
-                    final newUrl = _urlController.text.trim();
-                    if (newUrl.isNotEmpty) {
-                      context.read<AppStateProvider>().updateServerUrl(newUrl);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("تم تحديث عنوان الخادم وفحص الاتصال"),
-                          backgroundColor: AppColors.primary,
-                        ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text("حفظ وفحص الاتصال"),
-                ),
-              ],
+                child: const Text("إغلاق"),
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSpecRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12, color: AppColors.neonEmerald, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }
