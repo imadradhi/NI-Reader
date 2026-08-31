@@ -1,26 +1,4 @@
-/// Key parameters required to initiate BAC or PACE session with Iraqi ID card
-class NfcAuthKey {
-  final String documentNumber;
-  final String dateOfBirth; // Format: YYMMDD
-  final String expiryDate;  // Format: YYMMDD
-
-  NfcAuthKey({
-    required this.documentNumber,
-    required this.dateOfBirth,
-    required this.expiryDate,
-  });
-
-  /// Sanitized document number (removes '<' and whitespace)
-  String get cleanDocumentNumber => documentNumber.replaceAll('<', '').replaceAll(' ', '').toUpperCase();
-  String get cleanDob => dateOfBirth.replaceAll('<', '').replaceAll(' ', '');
-  String get cleanExpiry => expiryDate.replaceAll('<', '').replaceAll(' ', '');
-
-  Map<String, dynamic> toJson() => {
-    'documentNumber': cleanDocumentNumber,
-    'dateOfBirth': cleanDob,
-    'expiryDate': cleanExpiry,
-  };
-}
+export 'nfc_auth_key.dart';
 
 /// NFC Chip data model extracted from ICAO 9303 Data Groups (DG1, DG2, DG11, DG13, SOD).
 class NfcData {
