@@ -202,16 +202,18 @@ public final class MainViewModelIOS: ObservableObject {
         let report = CrossDataVerifier.verify(mrzData: self.mrzData, nfcData: nfcData)
         self.verificationReport = report
         
+        let docNum = nfcData.dg1Data?.documentNumber ?? mrzData?.documentNumber ?? ""
+        let englishName = "\(nfcData.dg1Data?.primaryIdentifier ?? mrzData?.primaryIdentifier ?? "") \(nfcData.dg1Data?.secondaryIdentifier ?? mrzData?.secondaryIdentifier ?? "")".trimmingCharacters(in: .whitespaces)
         let personal = PersonalData(
-            nationalIdNumber: nfcData.dg1Data?.documentNumber ?? mrzData?.documentNumber ?? "",
-            fullNameArabic: nfcData.dg11Details?.fullNameNationalLanguage ?? "علي حسين كاظم",
-            fullNameEnglish: "\(nfcData.dg1Data?.primaryIdentifier ?? "") \(nfcData.dg1Data?.secondaryIdentifier ?? "")".trimmingCharacters(in: .whitespaces),
+            nationalIdNumber: docNum,
+            fullNameArabic: nfcData.dg11Details?.fullNameNationalLanguage,
+            fullNameEnglish: englishName.isEmpty ? nil : englishName,
             dateOfBirth: mrzData?.formattedDob() ?? nfcData.dg1Data?.dateOfBirth ?? "",
             gender: nfcData.dg1Data?.gender ?? mrzData?.gender ?? "M",
             expiryDate: mrzData?.formattedExpiry() ?? nfcData.dg1Data?.expiryDate ?? "",
-            nationality: nfcData.dg1Data?.nationality ?? "IRQ",
-            province: nfcData.dg11Details?.placeOfBirth ?? "بغداد",
-            custodyInformation: nfcData.dg11Details?.custodyInformation ?? "متزوج"
+            nationality: nfcData.dg1Data?.nationality ?? mrzData?.nationality ?? "IRQ",
+            province: nfcData.dg11Details?.placeOfBirth,
+            custodyInformation: nfcData.dg11Details?.custodyInformation
         )
         
         let images = CardImages(

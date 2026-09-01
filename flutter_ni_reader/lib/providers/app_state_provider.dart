@@ -130,12 +130,12 @@ class AppStateProvider extends ChangeNotifier {
 
   CardData? buildConsolidatedCardData() {
     final personalData = PersonalData(
-      nationalIdNumber: mrzData?.optionalData1 ?? authKey?.cleanDocumentNumber ?? "000000000000",
-      fullNameArabic: nfcData?.dg11Details?.fullNameNationalLanguage ?? "أحمد علي محمد الموسوي",
+      nationalIdNumber: mrzData?.optionalData1 ?? authKey?.cleanDocumentNumber ?? "",
+      fullNameArabic: nfcData?.dg11Details?.fullNameNationalLanguage,
       fullNameEnglish: "${mrzData?.primaryIdentifier ?? ''} ${mrzData?.secondaryIdentifier ?? ''}".trim(),
-      dateOfBirth: _formatDate(mrzData?.dateOfBirth ?? authKey?.cleanDob ?? "900101"),
+      dateOfBirth: _formatDate(mrzData?.dateOfBirth ?? authKey?.cleanDob ?? ""),
       gender: mrzData?.gender ?? "M",
-      expiryDate: _formatDate(mrzData?.expiryDate ?? authKey?.cleanExpiry ?? "300101"),
+      expiryDate: _formatDate(mrzData?.expiryDate ?? authKey?.cleanExpiry ?? ""),
       nationality: mrzData?.nationality ?? "IRQ",
       custodyInformation: nfcData?.dg11Details?.custodyInformation,
     );
