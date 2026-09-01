@@ -17,13 +17,13 @@ class _ManualKeyDialogState extends State<ManualKeyDialog> with SingleTickerProv
   final _formKeyMrz = GlobalKey<FormState>();
   final _formKeyCan = GlobalKey<FormState>();
 
-  // MRZ Controllers
-  final _docNumController = TextEditingController(text: "AZ9431882");
-  final _dobController = TextEditingController(text: "950320");
-  final _expiryController = TextEditingController(text: "350320");
+  // MRZ Controllers (empty by default for user input)
+  final _docNumController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _expiryController = TextEditingController();
 
   // CAN Controller (6-digit)
-  final _canController = TextEditingController(text: "943188");
+  final _canController = TextEditingController();
 
   @override
   void initState() {
