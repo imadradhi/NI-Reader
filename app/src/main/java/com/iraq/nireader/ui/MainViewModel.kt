@@ -35,6 +35,7 @@ data class UiState(
     val usbConnected: Boolean = false,
     val apiConnected: Boolean = false,
     val nfcReady: Boolean = false,
+    val nfcStage: Int = 0, // 0 = Waiting, 1 = Detected, 2 = Communicating/Auth, 3 = Reading, 4 = Complete
     val nfcReadingStatusText: String = "",
     val nfcProgressPercentage: Int = 0,
     val nfcStepDetail: String = "",
@@ -129,6 +130,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 currentStep = AppStep.NFC_TAP,
                 isNfcChipConnected = false,
+                nfcStage = 0,
                 nfcProgressPercentage = 0,
                 nfcStepDetail = "ضع ظهر البطاقة ملامساً لحساس الـ NFC خلف الهاتف",
                 statusMessage = "ضع البطاقة خلف الهاتف لقراءة الشريحة الإلكترونية"
@@ -142,6 +144,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 currentStep = AppStep.CAMERA_BACK,
                 mrzData = null,
+                nfcStage = 0,
                 statusMessage = "أعد توجيه الكاميرا نحو الـ MRZ في ظهر البطاقة",
                 errorMessage = null
             )
@@ -173,6 +176,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 mrzData = mrz,
                 currentStep = AppStep.NFC_TAP,
                 isNfcChipConnected = false,
+                nfcStage = 0,
                 nfcProgressPercentage = 0,
                 nfcStepDetail = "ضع ظهر البطاقة ملامساً لحساس الـ NFC",
                 statusMessage = "ضع البطاقة بالقرب من حساس الـ NFC خلف الهاتف"
@@ -266,9 +270,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update {
                             it.copy(
                                 isNfcChipConnected = true,
+                                nfcStage = 1,
                                 nfcProgressPercentage = 10,
                                 nfcStepDetail = status.message,
-                                nfcReadingStatusText = "تم العثور على الشريحة (${status.protocol})"
+                                nfcReadingStatusText = "المرحلة الأولى: تم الكشف عن شريحة NFC بنجاح ✓"
                             )
                         }
                         addDebugLog("NFC Tag connected: ${status.historicalBytes}")
@@ -277,9 +282,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update {
                             it.copy(
                                 isNfcChipConnected = true,
-                                nfcProgressPercentage = 20,
+                                nfcStage = 2,
+                                nfcProgressPercentage = 25,
                                 nfcStepDetail = status.message,
-                                nfcReadingStatusText = "جاري المصادقة الأمنية (${status.protocol})..."
+                                nfcReadingStatusText = "المرحلة الثانية: يتم التواصل وتأكيد المصادقة الأمنية (${status.protocol})..."
                             )
                         }
                         addDebugLog("Authenticating via ${status.protocol}")
@@ -288,9 +294,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update {
                             it.copy(
                                 isNfcChipConnected = true,
+                                nfcStage = 3,
                                 nfcProgressPercentage = status.progressPercentage,
                                 nfcStepDetail = status.stepDetail,
-                                nfcReadingStatusText = "جاري قراءة ${status.groupName} (${status.currentStep}/${status.totalSteps})..."
+                                nfcReadingStatusText = "المرحلة الثالثة: جاري قراءة ${status.groupName} (${status.currentStep}/${status.totalSteps})..."
                             )
                         }
                         addDebugLog("Reading ${status.groupName} (${status.progressPercentage}%)")
@@ -301,6 +308,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update {
                             it.copy(
                                 isNfcChipConnected = true,
+                                nfcStage = 4,
                                 nfcProgressPercentage = 100,
                                 nfcStepDetail = "اكتملت قراءة الشريحة بنجاح 100% ✓"
                             )
@@ -312,6 +320,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update {
                             it.copy(
                                 isNfcChipConnected = false,
+                                nfcStage = 0,
                                 nfcProgressPercentage = 0,
                                 nfcReadingStatusText = "",
                                 nfcStepDetail = status.message,

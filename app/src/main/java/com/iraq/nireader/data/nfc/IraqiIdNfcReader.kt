@@ -29,12 +29,12 @@ import java.security.spec.AlgorithmParameterSpec
 class IraqiIdNfcReader {
 
     companion object {
-        private const val ISO_DEP_TIMEOUT_MS = 10000
+        private const val ISO_DEP_TIMEOUT_MS = 15000
     }
 
     /**
      * Reads the Iraqi National ID card from an IsoDep NFC Tag.
-     * Emits continuous progress states via Kotlin Flow.
+     * Emits continuous progress states across 3 stages via Kotlin Flow.
      */
     fun readCard(tag: Tag, authKey: NfcAuthKey): Flow<NfcReadStatus> = flow {
         val startTime = System.currentTimeMillis()
@@ -63,7 +63,12 @@ class IraqiIdNfcReader {
             val historicalHex = historicalBytes?.let { ByteUtils.toHexString(it) }
             val cardSummary = "$isoType | UID: $uidHex${if (historicalHex != null) " | ATS: $historicalHex" else ""}"
             
-            emit(NfcReadStatus.CardDiscovered(historicalBytes = cardSummary, protocol = isoType))
+            // Stage 1: Chip Detected
+            emit(NfcReadStatus.CardDiscovered(
+                historicalBytes = cardSummary,
+                protocol = isoType,
+                message = "المرحلة الأولى: تم الكشف عن شريحة NFC بنجاح ✓"
+            ))
 
             val maxTranceiveLength = if (isoDep.maxTransceiveLength > 0) {
                 minOf(isoDep.maxTransceiveLength, PassportService.NORMAL_MAX_TRANCEIVE_LENGTH)
@@ -85,9 +90,12 @@ class IraqiIdNfcReader {
             var isAuthSucceeded = false
             val bacKey = authKey.toBacKeySpec()
 
-            // 1. Prioritize direct BAC on Iraqi National ID eMRTD applet
+            // Stage 2: Communicating & Authenticating (BAC / PACE)
             try {
-                emit(NfcReadStatus.Authenticating("BAC"))
+                emit(NfcReadStatus.Authenticating(
+                    protocol = "BAC",
+                    message = "المرحلة الثانية: يتم التواصل وتأكيد المصادقة الأمنية (BAC)..."
+                ))
                 passportService.sendSelectApplet(false)
                 passportService.doBAC(bacKey)
                 authProtocol = "BAC"
@@ -100,7 +108,10 @@ class IraqiIdNfcReader {
                     if (securityInfos != null && securityInfos.isNotEmpty()) {
                         for (secInfo in securityInfos) {
                             if (secInfo is PACEInfo) {
-                                emit(NfcReadStatus.Authenticating("PACE (${secInfo.protocolOIDString})"))
+                                emit(NfcReadStatus.Authenticating(
+                                    protocol = "PACE (${secInfo.protocolOIDString})",
+                                    message = "المرحلة الثانية: يتم التواصل وتأكيد المصادقة الأمنية (PACE)..."
+                                ))
                                 passportService.doPACE(
                                     bacKey,
                                     secInfo.objectIdentifier,
@@ -136,11 +147,11 @@ class IraqiIdNfcReader {
                 }
             }
 
-            // 3. Read Data Groups (DG1, DG2, DG11, DG13, SOD)
+            // Stage 3: Reading Data Groups (DG1, DG2, DG11, DG13, SOD)
             val totalDgs = 4
 
             // DG1 - MRZ Info (25%)
-            emit(NfcReadStatus.ReadingDataGroup("DG1 (البيانات النصية)", 1, totalDgs, 25, "قراءة بيانات الهوية ورقم الوثيقة..."))
+            emit(NfcReadStatus.ReadingDataGroup("DG1 (البيانات النصية)", 1, totalDgs, 25, "المرحلة الثالثة: جاري قراءة بيانات الهوية ورقم الوثيقة (DG1)..."))
             val dg1In: InputStream = passportService.getInputStream(PassportService.EF_DG1)
             val dg1File = DG1File(dg1In)
             val dg1Mrz = NfcDataGroupParser.parseDg1(dg1File)

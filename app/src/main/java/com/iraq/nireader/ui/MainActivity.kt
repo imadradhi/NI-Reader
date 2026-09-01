@@ -253,13 +253,34 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             AppStep.NFC_TAP -> {
-                binding.dotNfcChip.setBackgroundResource(
-                    if (state.isNfcChipConnected) R.drawable.shape_dot_success else R.drawable.shape_dot_error
-                )
-                binding.textNfcChipStatus.text = if (state.isNfcChipConnected) "تم العثور على الشريحة ✓" else "بانتظار ملامسة الشريحة..."
+                val stage = state.nfcStage
                 binding.progressNfcHorizontal.progress = state.nfcProgressPercentage
                 binding.textNfcPercentage.text = "${state.nfcProgressPercentage}%"
                 binding.textNfcLiveProgress.text = if (state.nfcStepDetail.isNotEmpty()) state.nfcStepDetail else "ضع ظهر البطاقة ملامساً لحساس الـ NFC..."
+
+                // Stage 1: Card Discovered
+                val isStage1Done = stage >= 1
+                binding.dotStage1.setBackgroundResource(
+                    if (isStage1Done) R.drawable.shape_dot_success else R.drawable.shape_dot_error
+                )
+                binding.textStage1Title.text = if (isStage1Done) "المرحلة 1: تم الكشف عن شريحة NFC ✓" else "المرحلة 1: تم الكشف عن شريحة NFC"
+                binding.textStage1Sub.text = if (isStage1Done) "تم الاتصال بالتردد اللاسلكي للشريحة بنجاح" else "بانتظار ملامسة البطاقة لحساس الهاتف..."
+
+                // Stage 2: Communicating & Authenticating
+                val isStage2Done = stage >= 2
+                binding.dotStage2.setBackgroundResource(
+                    if (isStage2Done) R.drawable.shape_dot_success else R.drawable.shape_dot_error
+                )
+                binding.textStage2Title.text = if (isStage2Done) "المرحلة 2: يتم التواصل والمصادقة الأمنية ✓" else "المرحلة 2: يتم التواصل والمصادقة الأمنية"
+                binding.textStage2Sub.text = if (isStage2Done) "تم فتح القناة المشفرة وتأكيد مفاتيح BAC" else if (stage == 1) "جاري المصادقة الأمنية وفك التشفير..." else "فتح القناة المشفرة ببروتوكول BAC"
+
+                // Stage 3: Reading Data
+                val isStage3Done = stage >= 3
+                binding.dotStage3.setBackgroundResource(
+                    if (isStage3Done) R.drawable.shape_dot_success else R.drawable.shape_dot_error
+                )
+                binding.textStage3Title.text = if (isStage3Done) "المرحلة 3: جاري القراءة واستخراج البيانات ✓" else "المرحلة 3: جاري القراءة واستخراج البيانات"
+                binding.textStage3Sub.text = if (stage == 4) "اكتملت قراءة كافة المجموعات بنجاح 100% ✓" else if (isStage3Done) "سحب البيانات الشخصية والصورة والتوقيع الرقمي..." else "قراءة مجموعات البيانات (DG1, DG2, DG11, SOD)"
 
                 // Step checklist
                 binding.textStepDg1.text = if (state.nfcProgressPercentage >= 25) "✓ 1. تم قراءة البيانات النصية ورقم الوثيقة (DG1)" else "⏳ 1. قراءة البيانات النصية ورقم الوثيقة (DG1)"

@@ -31,7 +31,7 @@ class MrzAndNfcUnitTest {
     fun testIraqiIdTd1Parsing() {
         // Typical 3-line TD1 MRZ on back of Iraqi National ID
         val line1 = "I<IRQ1234567897<<<<<<<<<<<<<<<"
-        val line2 = "9001014M3001018IRQ<<<<<<<<<<<2"
+        val line2 = "9001011M3001018IRQ<<<<<<<<<<<2"
         val line3 = "KADHIMI<<AHMED<<<<<<<<<<<<<<<<"
 
         val mrz = MrzParser.parseTd1(listOf(line1, line2, line3))
@@ -48,7 +48,7 @@ class MrzAndNfcUnitTest {
     fun testIraqiIdTd1ParsingWithOcrNoise() {
         // Simulating ML Kit OCR noise (brackets, spaces, OCR character substitution)
         val line1 = "«I<IRQ1234567897«««««««««««««««"
-        val line2 = "9OO1O14M3OO1O18IRQ«««««««««««2"
+        val line2 = "9OO1O11M3OO1O18IRQ«««««««««««2"
         val line3 = "KADHIMI<<AHMED««««««««««««««««"
 
         val mrz = MrzParser.parseTd1(listOf(line1, line2, line3))
@@ -117,5 +117,21 @@ class MrzAndNfcUnitTest {
         assertEquals("AZ9431882", mrzFrom2Lines!!.documentNumber)
         assertEquals("840829", mrzFrom2Lines.dateOfBirth)
         assertEquals("311211", mrzFrom2Lines.expiryDate)
+    }
+
+    @Test
+    fun testSmartAutoHealingOcrConfusions() {
+        // Test auto-healing when '8' is misread as 'B' and '0' is misread as 'O' and '5' as 'S'
+        val noisyLine1 = "IDIRQAZ94318824198405252409<<<"
+        val noisyLine2 = "B4O8299M3112113IRQ<<<<<<<<<<<9" // B4O829 instead of 840829
+        val noisyLine3 = "<<EMAD<<<<<<<<<<<<<<<<<<<<<<<"
+
+        val mrz = MrzParser.parseTd1(listOf(noisyLine1, noisyLine2, noisyLine3))
+        assertNotNull(mrz)
+        assertEquals("AZ9431882", mrz!!.documentNumber)
+        assertEquals("840829", mrz.dateOfBirth) // Auto-healed from B4O829!
+        assertTrue(mrz.isDateOfBirthValid)
+        assertEquals("311211", mrz.expiryDate)
+        assertTrue(mrz.isExpiryDateValid)
     }
 }

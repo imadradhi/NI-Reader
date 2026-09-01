@@ -304,11 +304,13 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Card Frame Container with MRZ Chevron Guidelines -->
+            <!-- Card Frame Container with MRZ Chevron Guidelines (Enlarged to 90% width with standard ID-1 Ratio) -->
             <FrameLayout
                 android:id="@+id/cardFrameContainer"
-                android:layout_width="320dp"
-                android:layout_height="200dp"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintWidth_percent="0.90"
+                app:layout_constraintDimensionRatio="85.6:53.98"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -456,35 +458,35 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="تم التحقق من الأرقام التدقيقية (Checksums) وجاهز لقراءة الشريحة"
+                    android:gravity="center"
+                    android:text="تم استخراج بيانات المصادقة الأمنية للشريحة الإلكترونية"
                     android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    android:gravity="center" />
+                    android:textSize="13sp" />
 
-                <!-- Card Preview Details -->
+                <!-- Scanned Card Preview Box -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="20dp"
                     app:cardBackgroundColor="@color/surface_card"
-                    app:cardCornerRadius="14dp"
-                    app:cardElevation="2dp">
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="16dp">
+                        android:padding="20dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="بيانات المفاتيح المستخرجة (BAC Keys)"
+                            android:text="بيانات المصادقة المستخرجة (BAC Key)"
                             android:textColor="@color/secondary"
-                            android:textSize="13sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
 
-                        <!-- Doc Number -->
+                        <!-- Document Number -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -494,7 +496,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="رقم الوثيقة:"
+                                android:text="رقم الوثيقة (الهوية):"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="13sp" />
                             <TextView
@@ -604,7 +606,7 @@
             </LinearLayout>
         </ScrollView>
 
-        <!-- 3. NFC Reading Layout with Multi-Stage Progress HUD -->
+        <!-- 3. NFC Reading Layout with 3-Stage Progress HUD -->
         <ScrollView
             android:id="@+id/layoutNfcTap"
             android:layout_width="match_parent"
@@ -621,9 +623,9 @@
                 <!-- NFC Pulse Icon -->
                 <ImageView
                     android:id="@+id/imgNfcWave"
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
-                    android:layout_marginTop="10dp"
+                    android:layout_width="90dp"
+                    android:layout_height="90dp"
+                    android:layout_marginTop="6dp"
                     android:src="@android:drawable/stat_sys_upload"
                     app:tint="@color/secondary" />
 
@@ -631,46 +633,165 @@
                     android:id="@+id/textNfcTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="ضع البطاقة خلف الهاتف"
+                    android:layout_marginTop="12dp"
+                    android:text="ضع ظهر البطاقة ملامساً لحساس الـ NFC"
                     android:textColor="@color/text_primary"
-                    android:textSize="18sp"
+                    android:textSize="17sp"
                     android:textStyle="bold" />
 
-                <!-- Multi-stage Chip Connection Badge -->
-                <LinearLayout
-                    android:id="@+id/badgeNfcChipStatus"
-                    android:layout_width="wrap_content"
+                <!-- 3 Stages Main Progress Container -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_badge_dark"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="14dp"
-                    android:paddingVertical="6dp">
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp">
 
-                    <View
-                        android:id="@+id/dotNfcChip"
-                        android:layout_width="9dp"
-                        android:layout_height="9dp"
-                        android:background="@drawable/shape_dot_error" />
-
-                    <TextView
-                        android:id="@+id/textNfcChipStatus"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="بانتظار ملامسة الشريحة..."
-                        android:textColor="@color/text_primary"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="مراحل قراءة شريحة الهوية الإلكترونية"
+                            android:textColor="@color/secondary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <!-- Stage 1: Card Discovered -->
+                        <LinearLayout
+                            android:id="@+id/layoutStage1"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:id="@+id/dotStage1"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/shape_dot_error" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/textStage1Title"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="المرحلة 1: تم الكشف عن شريحة NFC"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/textStage1Sub"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="بانتظار ملامسة البطاقة..."
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Stage 2: Communicating & Authenticating -->
+                        <LinearLayout
+                            android:id="@+id/layoutStage2"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:id="@+id/dotStage2"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/shape_dot_error" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/textStage2Title"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="المرحلة 2: يتم التواصل والمصادقة الأمنية"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/textStage2Sub"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="فتح القناة المشفرة ببروتوكول BAC"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Stage 3: Reading Data -->
+                        <LinearLayout
+                            android:id="@+id/layoutStage3"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:id="@+id/dotStage3"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/shape_dot_error" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/textStage3Title"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="المرحلة 3: جاري القراءة واستخراج البيانات"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/textStage3Sub"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="سحب البيانات الشخصية والصورة والتوقيع الرقمي"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
 
                 <!-- Live Progress Bar (0% - 100%) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
                     <LinearLayout
@@ -714,7 +835,7 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
+                    android:layout_marginTop="14dp"
                     app:cardBackgroundColor="@color/surface_card"
                     app:cardCornerRadius="14dp">
 
@@ -728,7 +849,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="مراحل قراءة الشريحة الإلكترونية (ICAO 9303)"
+                            android:text="تفاصيل البيانات المستخرجة (ICAO 9303)"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp"
                             android:textStyle="bold" />
