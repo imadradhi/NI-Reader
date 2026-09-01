@@ -53,6 +53,10 @@ class NfcReaderService {
         return;
       }
     } on PlatformException catch (pe) {
+      if (pe.code == 'USER_CANCELED') {
+        yield NfcError("تم إلغاء عملية المسح من قبل المستخدم.");
+        return;
+      }
       yield NfcError(pe.message ?? "تعذر إكمال قراءة الشريحة. تأكد من تثبيت البطاقة على أعلى الهاتف.");
       return;
     } catch (e) {
