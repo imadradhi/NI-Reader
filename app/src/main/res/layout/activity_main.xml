@@ -411,12 +411,12 @@
                 app:layout_constraintStart_toStartOf="parent" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSkipToMrzManual"
+                android:id="@+id/btnManualBacFromCamera"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:text="تخطي الكاميرا ومتابعة للقراءة ←"
+                android:text="إدخال أرقام البطاقة يدوياً (Manual BAC) ←"
                 android:textColor="@color/secondary"
                 android:textSize="13sp"
                 app:layout_constraintBottom_toTopOf="@id/btnCaptureCamera"
@@ -906,24 +906,11 @@
                 </androidx.cardview.widget.CardView>
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSimulateNfcRead"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="16dp"
-                    android:backgroundTint="@color/primary"
-                    android:text="⚡ بدء قراءة الشريحة (المراحل الثلاث)"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="12dp" />
-
-                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnCancelNfc"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="16dp"
                     android:text="إلغاء والعودة للرئيسية"
                     android:textColor="@color/text_secondary"
                     app:cornerRadius="12dp"

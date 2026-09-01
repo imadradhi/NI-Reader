@@ -133,8 +133,8 @@ class MainActivity : AppCompatActivity() {
             captureCameraImage()
         }
 
-        binding.btnSkipToMrzManual.setOnClickListener {
-            viewModel.onBackImageCaptured(Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888))
+        binding.btnManualBacFromCamera.setOnClickListener {
+            showManualBacDialog()
         }
 
         binding.btnProceedToNfc.setOnClickListener {
@@ -143,11 +143,6 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnRescanMrz.setOnClickListener {
             viewModel.rescanMrz()
-        }
-
-        binding.btnSimulateNfcRead.setOnClickListener {
-            triggerHapticFeedback()
-            viewModel.startSimulated3StageNfcRead()
         }
 
         binding.btnCancelNfc.setOnClickListener {
@@ -534,7 +529,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun captureCameraImage() {
-        val imageCapture = imageCapture ?: return
+        val imageCapture = imageCapture
+        if (imageCapture == null) {
+            val bitmap = binding.cameraPreview.bitmap
+            if (bitmap != null) {
+                if (viewModel.uiState.value.currentStep == AppStep.CAMERA_FRONT) {
+                    viewModel.onFrontImageCaptured(bitmap)
+                } else if (viewModel.uiState.value.currentStep == AppStep.CAMERA_BACK) {
+                    viewModel.onBackImageCaptured(bitmap)
+                }
+            } else {
+                Toast.makeText(this, "الكاميرا غير جاهزة بعد، يرجى المحاولة بعد ثانية", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
         val tempFile = File.createTempFile("id_temp_", ".jpg", cacheDir)
         val outputOptions = ImageCapture.OutputFileOptions.Builder(tempFile).build()
 
@@ -546,18 +555,28 @@ class MainActivity : AppCompatActivity() {
                     val bitmap = BitmapFactory.decodeFile(tempFile.absolutePath)
                     tempFile.delete() // Immediate temporary file cleanup
 
-                    if (bitmap != null) {
+                    val finalBitmap = bitmap ?: binding.cameraPreview.bitmap
+                    if (finalBitmap != null) {
                         if (viewModel.uiState.value.currentStep == AppStep.CAMERA_FRONT) {
-                            viewModel.onFrontImageCaptured(bitmap)
+                            viewModel.onFrontImageCaptured(finalBitmap)
                         } else if (viewModel.uiState.value.currentStep == AppStep.CAMERA_BACK) {
-                            viewModel.onBackImageCaptured(bitmap)
+                            viewModel.onBackImageCaptured(finalBitmap)
                         }
                     }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
                     isCapturing.set(false)
-                    Toast.makeText(this@MainActivity, "Image Capture Error: ${exception.message}", Toast.LENGTH_SHORT).show()
+                    val fallbackBitmap = binding.cameraPreview.bitmap
+                    if (fallbackBitmap != null) {
+                        if (viewModel.uiState.value.currentStep == AppStep.CAMERA_FRONT) {
+                            viewModel.onFrontImageCaptured(fallbackBitmap)
+                        } else if (viewModel.uiState.value.currentStep == AppStep.CAMERA_BACK) {
+                            viewModel.onBackImageCaptured(fallbackBitmap)
+                        }
+                    } else {
+                        Toast.makeText(this@MainActivity, "خطأ التقاط الصورة: ${exception.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         )
