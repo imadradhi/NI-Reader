@@ -141,14 +141,22 @@ class SodSecurityInfo {
   final String? digestAlgorithm;
   final String? signatureAlgorithm;
   final String? issuerName;
+  final String? subject;
   final String? serialNumber;
+  final String? thumbprint;
+  final String? ldsVersion;
+  final String? dataGroupsPresent;
   final bool? isSignatureValid;
 
   const SodSecurityInfo({
     this.digestAlgorithm,
     this.signatureAlgorithm,
     this.issuerName,
+    this.subject,
     this.serialNumber,
+    this.thumbprint,
+    this.ldsVersion,
+    this.dataGroupsPresent,
     this.isSignatureValid,
   });
 
@@ -156,7 +164,11 @@ class SodSecurityInfo {
     'digestAlgorithm': digestAlgorithm,
     'signatureAlgorithm': signatureAlgorithm,
     'issuerName': issuerName,
+    'subject': subject,
     'serialNumber': serialNumber,
+    'thumbprint': thumbprint,
+    'ldsVersion': ldsVersion,
+    'dataGroupsPresent': dataGroupsPresent,
     'isSignatureValid': isSignatureValid,
   };
 
@@ -164,7 +176,11 @@ class SodSecurityInfo {
     digestAlgorithm: json['digestAlgorithm'],
     signatureAlgorithm: json['signatureAlgorithm'],
     issuerName: json['issuerName'],
+    subject: json['subject'],
     serialNumber: json['serialNumber'],
+    thumbprint: json['thumbprint'],
+    ldsVersion: json['ldsVersion'],
+    dataGroupsPresent: json['dataGroupsPresent'],
     isSignatureValid: json['isSignatureValid'],
   );
 }

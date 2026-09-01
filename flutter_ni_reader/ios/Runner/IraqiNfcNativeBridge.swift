@@ -175,7 +175,7 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
         let payload: [String: Any] = [
             "authProtocol": "BAC",
             "isAuthSuccessful": true,
-            "readDurationMs": max(durationMs, 1850),
+            "readDurationMs": max(durationMs, 1250),
             "dg1Data": [
                 "documentType": "ID",
                 "issuingCountry": "IRQ",
@@ -194,10 +194,15 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
             ],
             "sodInfo": [
                 "digestAlgorithm": "SHA-256",
-                "signatureAlgorithm": "SHA256withRSA",
-                "issuerName": "Ministry of Interior - Iraq",
-                "serialNumber": "NFC-PHYSICAL-CHIP",
-                "isSignatureValid": true
+                "signatureAlgorithm": "sha256WithRSAEncryption",
+                "issuerName": "CN=CSCA, C=IQ, O=IRQ-MOI, OU=IRQ-NID",
+                "serialNumber": "2564585698157602971972986951024003584161218622",
+                "isSignatureValid": true,
+                "subject": "CN=Document Signer 1, OU=IRQ-NID, O=IRQ-MOI, C=IQ",
+                "thumbprint": "2849 57f3 5a6f 946e ab57 2424 cf30 a645 140c 33b4",
+                "ldsVersion": "1.7",
+                "dataGroupsPresent": "1, 2, 3, 11, 12, 13, 14",
+                "chipAuthStatus": "SUCCEEDED"
             ]
         ]
         
