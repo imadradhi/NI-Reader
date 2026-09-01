@@ -2,7 +2,8 @@ import UIKit
 import Flutter
 import CoreNFC
 
-// MARK: - Native CoreNFC Bridge for Iraqi National ID (iOS)
+// MARK: - Native CoreNFC Bridge for Iraqi National ID (iOS 13.0+)
+@available(iOS 13.0, *)
 public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
     
     private var session: NFCTagReaderSession?
@@ -216,7 +217,7 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
 // MARK: - Flutter App Delegate
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
-    private var nfcBridge: IraqiNfcNativeBridge?
+    private var nfcBridge: Any?
 
     override func application(
         _ application: UIApplication,
@@ -225,19 +226,25 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
         let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
         let nfcChannel = FlutterMethodChannel(name: "com.iraq.nireader/nfc", binaryMessenger: controller.binaryMessenger)
         
-        nfcBridge = IraqiNfcNativeBridge()
+        if #available(iOS 13.0, *) {
+            nfcBridge = IraqiNfcNativeBridge()
+        }
         
         nfcChannel.setMethodCallHandler({ [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             guard let self = self else { return }
             
             if call.method == "startNfcRead" {
-                if let args = call.arguments as? [String: Any] {
-                    let docNumber = args["documentNumber"] as? String ?? ""
-                    let dob = args["dateOfBirth"] as? String ?? ""
-                    let expiry = args["expiryDate"] as? String ?? ""
-                    self.nfcBridge?.startNfcRead(docNumber: docNumber, dob: dob, expiry: expiry, result: result)
+                if #available(iOS 13.0, *) {
+                    if let args = call.arguments as? [String: Any], let bridge = self.nfcBridge as? IraqiNfcNativeBridge {
+                        let docNumber = args["documentNumber"] as? String ?? ""
+                        let dob = args["dateOfBirth"] as? String ?? ""
+                        let expiry = args["expiryDate"] as? String ?? ""
+                        bridge.startNfcRead(docNumber: docNumber, dob: dob, expiry: expiry, result: result)
+                    } else {
+                        result(FlutterError(code: "INVALID_ARGS", message: "Missing NFC authentication parameters", details: nil))
+                    }
                 } else {
-                    result(FlutterError(code: "INVALID_ARGS", message: "Missing NFC authentication parameters", details: nil))
+                    result(FlutterError(code: "NFC_UNAVAILABLE", message: "iOS 13.0 or newer is required for CoreNFC", details: nil))
                 }
             } else {
                 result(FlutterMethodNotImplemented)
