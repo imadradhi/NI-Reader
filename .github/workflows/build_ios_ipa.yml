@@ -23,11 +23,10 @@ jobs:
       - name: Initialize & Configure iOS Project Structure
         working-directory: ./flutter_ni_reader
         run: |
-          # Backup custom Info.plist, Entitlements, Swift Bridge and Podfile
+          # Backup custom Info.plist, Entitlements, AppDelegate and Podfile
           cp ios/Runner/Info.plist /tmp/CustomInfo.plist || true
           cp ios/Runner/Runner.entitlements /tmp/CustomRunner.entitlements || true
           cp ios/Runner/AppDelegate.swift /tmp/CustomAppDelegate.swift || true
-          cp ios/Runner/IraqiNfcNativeBridge.swift /tmp/CustomBridge.swift || true
           cp ios/Podfile /tmp/CustomPodfile || true
           
           # Generate standard Xcode project scaffolding
@@ -39,9 +38,8 @@ jobs:
           # Restore Runner.entitlements with CoreNFC capabilities
           cp /tmp/CustomRunner.entitlements ios/Runner/Runner.entitlements
           
-          # Restore native Swift CoreNFC bridge files
+          # Restore consolidated AppDelegate.swift with Native CoreNFC Bridge
           cp /tmp/CustomAppDelegate.swift ios/Runner/AppDelegate.swift
-          cp /tmp/CustomBridge.swift ios/Runner/IraqiNfcNativeBridge.swift
           
           # Restore Podfile with iOS 14.0 deployment target
           cp /tmp/CustomPodfile ios/Podfile
