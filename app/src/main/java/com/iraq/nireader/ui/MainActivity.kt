@@ -58,9 +58,9 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            startCamera()
+            viewModel.startReadingFlow()
         } else {
-            Toast.makeText(this, "Please grant camera permission to scan ID card", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "يرجى منح صلاحية الكاميرا لمسح البطاقة", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -129,12 +129,25 @@ class MainActivity : AppCompatActivity() {
             viewModel.cancelScanning()
         }
 
+        binding.btnCaptureCamera.setOnClickListener {
+            captureCameraImage()
+        }
+
+        binding.btnSkipToMrzManual.setOnClickListener {
+            viewModel.onBackImageCaptured(Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888))
+        }
+
         binding.btnProceedToNfc.setOnClickListener {
             viewModel.proceedToNfc()
         }
 
         binding.btnRescanMrz.setOnClickListener {
             viewModel.rescanMrz()
+        }
+
+        binding.btnSimulateNfcRead.setOnClickListener {
+            triggerHapticFeedback()
+            viewModel.startSimulated3StageNfcRead()
         }
 
         binding.btnCancelNfc.setOnClickListener {
