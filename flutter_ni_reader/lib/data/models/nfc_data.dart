@@ -106,7 +106,7 @@ class Dg11PersonalDetails {
   final String? personalSummary;
   final String? custodyInformation;
 
-  Dg11PersonalDetails({
+  const Dg11PersonalDetails({
     this.fullNameNationalLanguage,
     this.placeOfBirth,
     this.telephone,
@@ -144,7 +144,7 @@ class SodSecurityInfo {
   final String? serialNumber;
   final bool? isSignatureValid;
 
-  SodSecurityInfo({
+  const SodSecurityInfo({
     this.digestAlgorithm,
     this.signatureAlgorithm,
     this.issuerName,

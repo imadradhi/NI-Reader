@@ -117,7 +117,7 @@ class NfcReaderService {
         await FlutterNfcKit.transceive("00A4020C02010B");
         final dg11Bytes = await FlutterNfcKit.transceive("00B00000FF");
         if (dg11Bytes.isNotEmpty) {
-          dg11Details = const Dg11PersonalDetails();
+          dg11Details = Dg11PersonalDetails();
         }
       } catch (_) {}
 
@@ -148,7 +148,7 @@ class NfcReaderService {
             ),
         dg2FacePresent: dg2Present,
         dg11Details: dg11Details,
-        sodInfo: const SodSecurityInfo(
+        sodInfo: SodSecurityInfo(
           digestAlgorithm: "SHA-256",
           signatureAlgorithm: "SHA256withRSA",
           issuerName: "Ministry of Interior - Iraq",
