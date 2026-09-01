@@ -19,9 +19,18 @@ class HudOverlay extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final isLandscape = size.width > size.height;
     
-    // Responsive card dimensions (ID-1 aspect ratio: 85.60 x 53.98 mm = ~1.586)
-    final cardWidth = isLandscape ? size.height * 0.95 * 1.586 : size.width * 0.92;
-    final cardHeight = cardWidth / 1.586;
+    // Vertical/Tall Card Rectangle (ID-1 Aspect Ratio 54:85.6) so turning phone horizontally scans the card
+    final double cardWidth;
+    final double cardHeight;
+    
+    if (isLandscape) {
+      cardHeight = size.height * 0.80;
+      cardWidth = cardHeight * (85.60 / 53.98);
+    } else {
+      // Tall rectangle in portrait (height > width)
+      cardHeight = size.height * 0.58;
+      cardWidth = cardHeight * (53.98 / 85.60);
+    }
 
     return Stack(
       children: [

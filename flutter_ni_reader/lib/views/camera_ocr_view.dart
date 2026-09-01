@@ -65,32 +65,15 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
 
   Future<void> _initializeHardwareCamera() async {
     try {
-      var status = await Permission.camera.status;
-      if (!status.isGranted && !status.isLimited) {
-        status = await Permission.camera.request();
-      }
-
-      if (!status.isGranted && !status.isLimited) {
-        if (mounted) {
-          setState(() {
-            _isPermissionDenied = true;
-            _cameraErrorMessage = "يتطلب التطبيق إذن الكاميرا لمسح البطاقة والتعرف على أسطر الـ MRZ.";
-          });
-        }
-        return;
-      }
-
-      if (mounted) {
-        setState(() {
-          _isPermissionDenied = false;
-          _cameraErrorMessage = null;
-        });
-      }
+      try {
+        await Permission.camera.request();
+      } catch (_) {}
 
       _cameras = await availableCameras();
       if (_cameras.isEmpty) {
         if (mounted) {
           setState(() {
+            _isCameraInitialized = false;
             _isPermissionDenied = false;
             _cameraErrorMessage = "اضغط على زر فتح الكاميرا لالتقاط صورة ظهر البطاقة ومسح الـ MRZ:";
           });
@@ -127,6 +110,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
     } catch (e) {
       if (mounted) {
         setState(() {
+          _isCameraInitialized = false;
           _isPermissionDenied = false;
           _cameraErrorMessage = "اضغط على زر فتح الكاميرا لالتقاط صورة ظهر البطاقة ومسح الـ MRZ:";
         });
@@ -344,7 +328,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         : "مسح ظهر البطاقة (MRZ)";
     final hint = widget.isFrontCapture
         ? "ضع الوجه الأمامي داخل المستطيل الأخضر واضغط التقاط"
-        : "ضع أسطر الـ MRZ المشفرة داخل المستطيل الأخضر للمسح التلقائي";
+        : "ضع أسطر الـ MRZ داخل المستطيل الأخضر، أو وجّه الهاتف بالعرض لمسح البطاقة تلقائياً";
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -360,50 +344,35 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
             )
           else
             Container(
-              color: const Color(0xFF0F172A),
+              color: const Color(0xFF0B1120),
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: (_isPermissionDenied ? AppColors.neonCoral : AppColors.neonEmerald).withOpacity(0.15),
-                          border: Border.all(
-                            color: _isPermissionDenied ? AppColors.neonCoral : AppColors.neonEmerald,
-                            width: 2,
-                          ),
-                        ),
-                        child: Icon(
-                          _isPermissionDenied ? Icons.no_photography_outlined : Icons.camera_alt_outlined,
-                          size: 44,
-                          color: _isPermissionDenied ? AppColors.neonCoral : AppColors.neonEmerald,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _isPermissionDenied ? "صلاحية الكاميرا غير مفعلة" : "خيارات التقاط البطاقة",
-                        style: const TextStyle(
+                      const CircularProgressIndicator(color: AppColors.neonEmerald, strokeWidth: 3),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "جاري تشغيل الكاميرا المباشرة...",
+                        style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _cameraErrorMessage ?? "يمكنك استخدام كاميرا الهاتف أو اختيار صورة:",
+                      const SizedBox(height: 8),
+                      const Text(
+                        "يرجى توجيه الهاتف نحو البطاقة للمسح التلقائي",
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, height: 1.4),
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
                       ElevatedButton.icon(
                         onPressed: () => _pickImageFromSystemCamera(ImageSource.camera),
                         icon: const Icon(Icons.camera_alt_rounded),
-                        label: const Text("فتح كاميرا الهاتف لالتقاط البطاقة"),
+                        label: const Text("فتح الكاميرا والتقاط صورة مباشرة"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.neonEmerald,
                           foregroundColor: Colors.black,
@@ -411,42 +380,6 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
-                      const SizedBox(height: 10),
-
-                      OutlinedButton.icon(
-                        onPressed: () => _pickImageFromSystemCamera(ImageSource.gallery),
-                        icon: const Icon(Icons.photo_library_outlined),
-                        label: const Text("اختيار صورة من ألبوم الصور"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          minimumSize: const Size(double.infinity, 44),
-                          side: const BorderSide(color: AppColors.borderDark),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      TextButton.icon(
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (_) => const ManualKeyDialog(),
-                          );
-                        },
-                        icon: const Icon(Icons.edit_note, color: AppColors.neonGold),
-                        label: const Text(
-                          "أو المتابعة بالإدخال اليدوي المباشر (بدون تصوير)",
-                          style: TextStyle(color: AppColors.neonGold, fontSize: 12),
-                        ),
-                      ),
-
-                      if (_isPermissionDenied) ...[
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: () async => await openAppSettings(),
-                          child: const Text("فتح إعدادات الهاتف لتفعيل إذن الكاميرا", style: TextStyle(color: AppColors.neonCyan, fontSize: 11)),
-                        ),
-                      ],
                     ],
                   ),
                 ),
