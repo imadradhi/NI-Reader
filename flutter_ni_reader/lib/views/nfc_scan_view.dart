@@ -154,7 +154,7 @@ class _NfcScanViewState extends State<NfcScanView> with SingleTickerProviderStat
                 const SizedBox(height: 12),
 
                 const Text(
-                  "قرّب ظهر البطاقة من الجزء الخلفي للهاتف وثبّت الحركة حتى اكتمال القراءة (DG1, DG2, DG11, SOD)",
+                  "ألصق أعلى ظهر الآيفون (بجانب الكاميرا) مباشرة على شريحة ظهر البطاقة وثبّت الهاتف دون تحريك حتى اكتمال القراءة (DG1, DG2, DG11, SOD)",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -176,6 +176,30 @@ class _NfcScanViewState extends State<NfcScanView> with SingleTickerProviderStat
                   ),
                 ),
 
+                if (state.nfcError != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.neonCoral.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.neonCoral, width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.neonCoral, size: 24),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            state.nfcError!,
+                            style: const TextStyle(color: AppColors.neonCoral, fontSize: 12, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 const Spacer(),
 
                 // Error Retry Button if failed
@@ -183,10 +207,12 @@ class _NfcScanViewState extends State<NfcScanView> with SingleTickerProviderStat
                   ElevatedButton.icon(
                     onPressed: () => state.startNfcReading(),
                     icon: const Icon(Icons.refresh),
-                    label: const Text("إعادة المحاولة"),
+                    label: const Text("إعادة المحاولة وتثبيت البطاقة"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.error,
-                      minimumSize: const Size(double.infinity, 48),
+                      backgroundColor: AppColors.neonCoral,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
 

@@ -156,14 +156,18 @@ class NfcReaderService {
 
     } catch (e) {
       final errorStr = e.toString();
-      await FlutterNfcKit.finish(iosErrorMessage: "تعذر إكمال قراءة الشريحة. تأكد من تثبيت البطاقة.");
+      try {
+        await FlutterNfcKit.finish(iosErrorMessage: "انقطع الاتصال بالشريحة. يرجى تثبيت البطاقة بأعلى الهاتف.");
+      } catch (_) {}
       
       if (errorStr.contains("UserCanceled") || errorStr.contains("Session invalidated by user")) {
-        yield NfcError("تم إلغاء قراءة الـ NFC من قبل المستخدم.");
+        yield NfcError("تم إلغاء مسح الـ NFC من قبل المستخدم.");
       } else if (errorStr.contains("Session timeout") || errorStr.contains("timed out")) {
-        yield NfcError("انتهت مهلة قراءة الشريحة دون الكشف عن بطاقة. يرجى المحاولة وتثبيت البطاقة على ظهر الهاتف.");
+        yield NfcError("انتهت مهلة البحث عن الشريحة. يرجى تثبيت أعلى الآيفون على شريحة ظهر البطاقة وإعادة المحاولة.");
+      } else if (errorStr.contains("Session invalidated unexpectedly") || errorStr.contains("Tag was lost") || errorStr.contains("500")) {
+        yield NfcError("انقطع الاتصال اللاسلكي بالشريحة أثناء القراءة.\n\nتأكد من إلصاق أعلى ظهر الآيفون (بجانب الكاميرا) على ظهر البطاقة مباشرة دون تحريك لمدة ثانيتين.");
       } else {
-        yield NfcError("خطأ أثناء قراءة الشريحة الفيزيائية: $errorStr");
+        yield NfcError("تعذر الاتصال بالشريحة. يرجى إلصاق أعلى ظهر الآيفون على شريحة البطاقة وإعادة المحاولة.");
       }
     }
   }
