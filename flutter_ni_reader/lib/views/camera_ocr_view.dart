@@ -60,12 +60,12 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
   Future<void> _initializeHardwareCamera() async {
     try {
       // 1. Check and request camera permission
-      PermissionStatus status = await Permission.camera.status;
-      if (!status.isGranted) {
+      var status = await Permission.camera.status;
+      if (!status.isGranted && !status.isLimited) {
         status = await Permission.camera.request();
       }
 
-      if (!status.isGranted) {
+      if (!status.isGranted && !status.isLimited) {
         if (mounted) {
           setState(() {
             _isPermissionDenied = true;
@@ -87,7 +87,8 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
       if (_cameras.isEmpty) {
         if (mounted) {
           setState(() {
-            _cameraErrorMessage = "لم يتم العثور على مستشعر كاميرا في هذا الجهاز (يمكنك استخدام كاميرا النظام أو الإدخال اليدوي).";
+            _isPermissionDenied = false;
+            _cameraErrorMessage = "اضغط على زر فتح الكاميرا لالتقاط صورة ظهر البطاقة ومسح الـ MRZ:";
           });
         }
         return;
@@ -101,7 +102,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
 
       final controller = CameraController(
         backCamera,
-        ResolutionPreset.medium,
+        ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
@@ -112,12 +113,14 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
       setState(() {
         _cameraController = controller;
         _isCameraInitialized = true;
+        _isPermissionDenied = false;
         _cameraErrorMessage = null;
       });
     } catch (e) {
       if (mounted) {
         setState(() {
-          _cameraErrorMessage = "تعذر تشغيل الكاميرا المضمنة: ${e.toString()} (يمكنك استخدام كاميرا النظام أدناه)";
+          _isPermissionDenied = false;
+          _cameraErrorMessage = "اضغط على زر فتح الكاميرا لالتقاط صورة ظهر البطاقة ومسح الـ MRZ:";
         });
       }
     }
@@ -130,7 +133,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         source: source,
         maxWidth: 1920,
         maxHeight: 1080,
-        imageQuality: 90,
+        imageQuality: 95,
       );
 
       if (photo != null) {
@@ -143,7 +146,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("تعذر فتح كاميرا النظام: ${e.toString()}"),
+            content: Text("تعذر فتح كاميرا الهاتف: ${e.toString()}"),
             backgroundColor: AppColors.error,
           ),
         );
@@ -165,8 +168,6 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         imageFile = File(photo.path);
         final bytes = await imageFile.readAsBytes();
         base64Image = base64Encode(bytes);
-      } else {
-        base64Image = "mock_captured_image_base64";
       }
 
       await _processCapturedImage(imageFile, base64Image);
@@ -219,43 +220,59 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         } catch (_) {}
       }
 
-      // Fallback to standard Iraqi ID TD1 format if OCR was noisy
-      parsedMrz ??= MrzData(
-        rawMrzLines: [
-          "IDIRQAZ9431882<8199503201234<<",
-          "9503206M3503201IRQ<<<<<<<<<<<2",
-          "AL<<MOUSAWI<<AHMED<ALI<MOHAMME",
-        ],
-        documentType: "ID",
-        issuingCountry: "IRQ",
-        documentNumber: "AZ9431882",
-        documentNumberCheckDigit: "8",
-        isDocumentNumberValid: true,
-        dateOfBirth: "950320",
-        dateOfBirthCheckDigit: "6",
-        isDateOfBirthValid: true,
-        gender: "M",
-        expiryDate: "350320",
-        expiryDateCheckDigit: "1",
-        isExpiryDateValid: true,
-        nationality: "IRQ",
-        optionalData1: "199503201234",
-        compositeCheckDigit: "2",
-        isCompositeValid: true,
-        primaryIdentifier: "AHMED",
-        secondaryIdentifier: "ALI MOHAMMED",
-      );
+      if (parsedMrz != null) {
+        provider.onBackImageAndMrzCaptured(base64Image, parsedMrz);
+        setState(() => _isProcessing = false);
 
-      provider.onBackImageAndMrzCaptured(base64Image, parsedMrz);
-      setState(() => _isProcessing = false);
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const NfcScanView(),
-          ),
-        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const NfcScanView(),
+            ),
+          );
+        }
+      } else {
+        setState(() => _isProcessing = false);
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppColors.surfaceDark,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text(
+                "تعذر استخراج بيانات الـ MRZ",
+                style: TextStyle(color: AppColors.neonCoral, fontWeight: FontWeight.bold, fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              content: const Text(
+                "لم يتم التعرف على أسطر الـ MRZ في الصورة الملتقطة بوضوح.\n\nيرجى التأكد من تصوير أسفل ظهر البطاقة (الأسطر الثلاثة المشفرة) بالكامل وبإضاءة جيدة، أو استخدام الإدخال اليدوي المباشر.",
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    showDialog(
+                      context: context,
+                      builder: (_) => const ManualKeyDialog(),
+                    );
+                  },
+                  child: const Text("إدخال الأرقام يدوياً (Manual BAC)", style: TextStyle(color: AppColors.neonGold)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _pickImageFromSystemCamera(ImageSource.camera);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.neonEmerald, foregroundColor: Colors.black),
+                  child: const Text("إعادة التصوير"),
+                ),
+              ],
+            ),
+          );
+        }
       }
     }
   }
