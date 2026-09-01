@@ -133,23 +133,26 @@ class VerificationReportView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              cardData.personalData.fullNameArabic ?? "أحمد علي محمد الموسوي",
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                            if (cardData.personalData.fullNameArabic != null && cardData.personalData.fullNameArabic!.isNotEmpty)
+                              Text(
+                                cardData.personalData.fullNameArabic!,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              cardData.personalData.fullNameEnglish ?? "AHMED ALI MOHAMMED",
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.secondary,
-                                fontWeight: FontWeight.w500,
+                            if (cardData.personalData.fullNameEnglish != null && cardData.personalData.fullNameEnglish!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                cardData.personalData.fullNameEnglish!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.secondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                            ),
+                            ],
                             const Divider(color: AppColors.borderDark, height: 16),
                             _buildInfoRow("الرقم الوطني:", cardData.personalData.nationalIdNumber),
                             const SizedBox(height: 4),
