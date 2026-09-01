@@ -41,7 +41,7 @@ jobs:
           # Restore consolidated AppDelegate.swift with Native CoreNFC Bridge
           cp /tmp/CustomAppDelegate.swift ios/Runner/AppDelegate.swift
           
-          # Restore Podfile with iOS 14.0 deployment target
+          # Restore Podfile with iOS 15.0 deployment target
           cp /tmp/CustomPodfile ios/Podfile
 
       - name: Install Dependencies
