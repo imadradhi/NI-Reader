@@ -39,16 +39,9 @@ class NfcReaderService {
     final startTime = DateTime.now();
 
     try {
-      // 1. Check NFC Availability on device
-      final availability = await FlutterNfcKit.nfcAvailability;
-      if (availability != NFCAvailability.available) {
-        yield NfcError("ميزة الـ NFC غير مفعلة أو غير متوفرة على هذا الجهاز.");
-        return;
-      }
-
-      // 2. Poll for physical card tag (Presents native iOS CoreNFC sheet)
+      // Poll for physical card tag (Presents native iOS CoreNFC sheet)
       final NFCTag tag = await FlutterNfcKit.poll(
-        timeout: const Duration(seconds: 25),
+        timeout: const Duration(seconds: 30),
         iosAlertMessage: "ضع أعلى هاتف الآيفون ملامساً لظهر البطاقة لقراءة الشريحة الإلكترونية...",
         iosMultipleTagMessage: "تم العثور على أكثر من بطاقة. يرجى تقريب بطاقة واحدة فقط.",
       );

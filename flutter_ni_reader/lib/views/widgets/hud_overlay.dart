@@ -17,12 +17,15 @@ class HudOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final cardWidth = size.width * 0.88;
-    final cardHeight = cardWidth * 0.63; // ID-1 Card ratio (85.60 x 53.98 mm)
+    final isLandscape = size.width > size.height;
+    
+    // Responsive card dimensions (ID-1 aspect ratio: 85.60 x 53.98 mm = ~1.586)
+    final cardWidth = isLandscape ? size.height * 0.95 * 1.586 : size.width * 0.92;
+    final cardHeight = cardWidth / 1.586;
 
     return Stack(
       children: [
-        // Semi-transparent darkened background with cutout
+        // Semi-transparent darkened background with clear cutout
         ColorFiltered(
           colorFilter: ColorFilter.mode(
             Colors.black.withOpacity(0.65),
@@ -51,7 +54,7 @@ class HudOverlay extends StatelessWidget {
           ),
         ),
 
-        // Corner Brackets and Neon Border
+        // Glowing Green Neon Rectangle Frame (Bounding Box)
         Center(
           child: Container(
             width: cardWidth,
@@ -59,19 +62,26 @@ class HudOverlay extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppColors.neonEmerald.withOpacity(0.4),
-                width: 1.5,
+                color: AppColors.neonEmerald,
+                width: 2.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.neonEmerald.withOpacity(0.35),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                ),
+              ],
             ),
             child: Stack(
               children: [
-                // 4 Futuristic Corners
+                // 4 Thick Glowing Corner Brackets
                 const Positioned(top: 0, left: 0, child: _CornerBracket(isTop: true, isLeft: true)),
                 const Positioned(top: 0, right: 0, child: _CornerBracket(isTop: true, isLeft: false)),
                 const Positioned(bottom: 0, left: 0, child: _CornerBracket(isTop: false, isLeft: true)),
                 const Positioned(bottom: 0, right: 0, child: _CornerBracket(isTop: false, isLeft: false)),
                 
-                // Scanning Laser Line (if active)
+                // Active Green Scanning Laser Line
                 if (isScanning) const _LaserScanAnimation(),
               ],
             ),

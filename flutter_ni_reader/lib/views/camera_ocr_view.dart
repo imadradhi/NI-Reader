@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -11,7 +13,7 @@ import '../../data/models/mrz_data.dart';
 import '../../data/ocr/mrz_parser.dart';
 import '../../providers/app_state_provider.dart';
 import 'manual_key_dialog.dart';
-import 'nfc_scan_view.dart';
+import 'mrz_confirmation_view.dart';
 import 'widgets/hud_overlay.dart';
 
 class CameraOcrView extends StatefulWidget {
@@ -30,6 +32,8 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
   bool _isProcessing = false;
   bool _isPermissionDenied = false;
   String? _cameraErrorMessage;
+  Timer? _autoScanTimer;
+
   final TextRecognizer _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -42,6 +46,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
 
   @override
   void dispose() {
+    _autoScanTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _cameraController?.dispose();
     _textRecognizer.close();
@@ -53,13 +58,13 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
     if (state == AppLifecycleState.resumed) {
       _initializeHardwareCamera();
     } else if (state == AppLifecycleState.inactive) {
+      _autoScanTimer?.cancel();
       _cameraController?.dispose();
     }
   }
 
   Future<void> _initializeHardwareCamera() async {
     try {
-      // 1. Check and request camera permission
       var status = await Permission.camera.status;
       if (!status.isGranted && !status.isLimited) {
         status = await Permission.camera.request();
@@ -82,7 +87,6 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         });
       }
 
-      // 2. Discover available device cameras
       _cameras = await availableCameras();
       if (_cameras.isEmpty) {
         if (mounted) {
@@ -94,7 +98,6 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         return;
       }
 
-      // 3. Select back camera
       final backCamera = _cameras.firstWhere(
         (cam) => cam.lensDirection == CameraLensDirection.back,
         orElse: () => _cameras.first,
@@ -116,6 +119,11 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         _isPermissionDenied = false;
         _cameraErrorMessage = null;
       });
+
+      // Start automatic continuous background scanner for MRZ lines
+      if (!widget.isFrontCapture) {
+        _startAutoScanner();
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -126,7 +134,58 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
     }
   }
 
-  /// Opens Native iOS/Android System Camera via ImagePicker (100% reliable)
+  void _startAutoScanner() {
+    _autoScanTimer?.cancel();
+    _autoScanTimer = Timer.periodic(const Duration(milliseconds: 750), (timer) async {
+      if (!_isCameraInitialized || _isProcessing || _cameraController == null || !_cameraController!.value.isInitialized) {
+        return;
+      }
+
+      try {
+        final XFile photo = await _cameraController!.takePicture();
+        final file = File(photo.path);
+        final inputImage = InputImage.fromFile(file);
+        final recognizedText = await _textRecognizer.processImage(inputImage);
+
+        final List<String> rawLines = [];
+        for (final block in recognizedText.blocks) {
+          for (final line in block.lines) {
+            rawLines.add(line.text);
+          }
+        }
+
+        final parsed = MrzParser.parseTd1(rawLines);
+        if (parsed != null && (parsed.isDocumentNumberValid || parsed.isDateOfBirthValid || parsed.isExpiryDateValid)) {
+          // MRZ Auto-Detected Successfully!
+          timer.cancel();
+          _isProcessing = true;
+          HapticFeedback.heavyImpact();
+
+          final bytes = await file.readAsBytes();
+          final base64Image = base64Encode(bytes);
+          try { file.delete(); } catch (_) {}
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MrzConfirmationView(
+                  mrzData: parsed,
+                  cardImageBase64: base64Image,
+                ),
+              ),
+            );
+          }
+        } else {
+          try { file.delete(); } catch (_) {}
+        }
+      } catch (_) {
+        // Continue scanning silently
+      }
+    });
+  }
+
+  /// Opens Native iOS/Android System Camera via ImagePicker
   Future<void> _pickImageFromSystemCamera(ImageSource source) async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
@@ -158,6 +217,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
     if (_isProcessing) return;
 
     setState(() => _isProcessing = true);
+    _autoScanTimer?.cancel();
 
     try {
       String base64Image = "";
@@ -188,7 +248,6 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
     final provider = context.read<AppStateProvider>();
 
     if (widget.isFrontCapture) {
-      // Front Capture Completed
       provider.onFrontImageCaptured(base64Image);
       setState(() => _isProcessing = false);
 
@@ -201,7 +260,6 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         );
       }
     } else {
-      // Back Capture with OCR text recognition
       MrzData? parsedMrz;
 
       if (imageFile != null) {
@@ -221,14 +279,16 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
       }
 
       if (parsedMrz != null) {
-        provider.onBackImageAndMrzCaptured(base64Image, parsedMrz);
         setState(() => _isProcessing = false);
 
         if (mounted) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => const NfcScanView(),
+              builder: (_) => MrzConfirmationView(
+                mrzData: parsedMrz!,
+                cardImageBase64: base64Image,
+              ),
             ),
           );
         }
@@ -281,16 +341,16 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
   Widget build(BuildContext context) {
     final title = widget.isFrontCapture
         ? "تصوير الوجه الأمامي للبطاقة"
-        : "تصوير الوجه الخلفي (MRZ)";
+        : "مسح ظهر البطاقة (MRZ)";
     final hint = widget.isFrontCapture
-        ? "ضع الوجه الأمامي داخل الإطار التوجيهي واضغط على زر الالتقاط"
-        : "وجّه الكاميرا نحو أسطر الـ MRZ في ظهر البطاقة لقراءتها تلقائياً";
+        ? "ضع الوجه الأمامي داخل المستطيل الأخضر واضغط التقاط"
+        : "ضع أسطر الـ MRZ المشفرة داخل المستطيل الأخضر للمسح التلقائي";
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. Hardware Camera Live Preview Viewfinder
+          // 1. Live Camera Preview
           if (_isCameraInitialized && _cameraController != null)
             Positioned.fill(
               child: AspectRatio(
@@ -334,13 +394,12 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _cameraErrorMessage ?? "يمكنك استخدام كاميرا النظام المباشرة أو اختيار صورة:",
+                        _cameraErrorMessage ?? "يمكنك استخدام كاميرا الهاتف أو اختيار صورة:",
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, height: 1.4),
                       ),
                       const SizedBox(height: 20),
 
-                      // Direct System Camera Button (Guaranteed to Open Native iOS Camera)
                       ElevatedButton.icon(
                         onPressed: () => _pickImageFromSystemCamera(ImageSource.camera),
                         icon: const Icon(Icons.camera_alt_rounded),
@@ -354,7 +413,6 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
                       ),
                       const SizedBox(height: 10),
 
-                      // Pick from Gallery
                       OutlinedButton.icon(
                         onPressed: () => _pickImageFromSystemCamera(ImageSource.gallery),
                         icon: const Icon(Icons.photo_library_outlined),
@@ -368,7 +426,6 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
                       ),
                       const SizedBox(height: 10),
 
-                      // Manual Entry fallback
                       TextButton.icon(
                         onPressed: () {
                           showDialog(
@@ -396,59 +453,90 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
               ),
             ),
 
-          // 2. HUD Scanner Overlay Frame
-          if (_isCameraInitialized)
-            HudOverlay(
-              title: title,
-              hint: hint,
-              isScanning: !widget.isFrontCapture,
-            ),
+          // 2. High-Visibility Glowing Green HUD Frame (Bounding Box)
+          HudOverlay(
+            title: title,
+            hint: hint,
+            isScanning: !widget.isFrontCapture,
+          ),
 
-          // 3. Back Navigation Button
+          // 3. Back Button
           Positioned(
             top: 48,
-            right: 16,
+            right: 20,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
           ),
 
-          // 4. Live Capture Button (if camera initialized)
-          if (_isCameraInitialized)
-            Positioned(
-              bottom: 36,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: _isProcessing
-                    ? const CircularProgressIndicator(color: AppColors.neonEmerald)
-                    : GestureDetector(
-                        onTap: _captureAndProcessLive,
-                        child: Container(
-                          width: 76,
-                          height: 76,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.surfaceDark,
-                            border: Border.all(color: AppColors.neonEmerald, width: 4),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.neonEmerald.withOpacity(0.5),
-                                blurRadius: 16,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: AppColors.neonEmerald,
-                            size: 36,
-                          ),
+          // 4. Bottom Controls: Manual BAC & Shutter Capture Button
+          Positioned(
+            bottom: 30,
+            left: 20,
+            right: 20,
+            child: Column(
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const ManualKeyDialog(),
+                    );
+                  },
+                  icon: const Icon(Icons.keyboard, color: AppColors.secondary, size: 18),
+                  label: const Text(
+                    "إدخال أرقام البطاقة يدوياً (Manual BAC) ←",
+                    style: TextStyle(color: AppColors.secondary, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // System Camera Button
+                    IconButton(
+                      icon: const Icon(Icons.photo_camera, color: Colors.white70, size: 28),
+                      onPressed: () => _pickImageFromSystemCamera(ImageSource.camera),
+                    ),
+
+                    // Primary Glowing Capture Button
+                    GestureDetector(
+                      onTap: _captureAndProcessLive,
+                      child: Container(
+                        width: 76,
+                        height: 76,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.neonEmerald, width: 4),
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.neonEmerald.withOpacity(0.5),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
+                        child: _isProcessing
+                            ? const Padding(
+                                padding: EdgeInsets.all(20),
+                                child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3),
+                              )
+                            : const Icon(Icons.camera_alt, color: Colors.black, size: 36),
                       ),
-              ),
+                    ),
+
+                    // Gallery Button
+                    IconButton(
+                      icon: const Icon(Icons.photo_library, color: Colors.white70, size: 28),
+                      onPressed: () => _pickImageFromSystemCamera(ImageSource.gallery),
+                    ),
+                  ],
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
