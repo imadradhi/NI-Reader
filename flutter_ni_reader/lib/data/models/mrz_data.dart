@@ -85,4 +85,25 @@ class MrzData {
     primaryIdentifier: json['primaryIdentifier'] ?? '',
     secondaryIdentifier: json['secondaryIdentifier'] ?? '',
   );
+
+  String formattedDob() {
+    if (dateOfBirth.length == 6) {
+      final yy = int.tryParse(dateOfBirth.substring(0, 2)) ?? 0;
+      final mm = dateOfBirth.substring(2, 4);
+      final dd = dateOfBirth.substring(4, 6);
+      final century = yy > 45 ? "19" : "20";
+      return "$century$yy-$mm-$dd";
+    }
+    return dateOfBirth;
+  }
+
+  String formattedExpiry() {
+    if (expiryDate.length == 6) {
+      final yy = expiryDate.substring(0, 2);
+      final mm = expiryDate.substring(2, 4);
+      final dd = expiryDate.substring(4, 6);
+      return "20$yy-$mm-$dd";
+    }
+    return expiryDate;
+  }
 }
