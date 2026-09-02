@@ -37,6 +37,7 @@ class _NfcScanViewState extends State<NfcScanView> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgDark,
       appBar: AppBar(
         title: const Text("قراءة الشريحة الإلكترونية (NFC)"),
         centerTitle: true,
@@ -55,11 +56,12 @@ class _NfcScanViewState extends State<NfcScanView> with SingleTickerProviderStat
 
           final authKey = state.authKey;
 
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Auth Key Summary Chip
+                // 1. Auth Key Summary Chip (BAC Key)
                 if (authKey != null)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -90,89 +92,114 @@ class _NfcScanViewState extends State<NfcScanView> with SingleTickerProviderStat
                     ),
                   ),
 
-                const Spacer(),
+                const SizedBox(height: 24),
 
-                // Animated NFC Radar Icon
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    final scale = 1.0 + (_pulseController.value * 0.2);
-                    final opacity = 0.8 - (_pulseController.value * 0.4);
+                // 2. Animated NFC Radar Icon
+                Center(
+                  child: AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      final scale = 1.0 + (_pulseController.value * 0.15);
+                      final opacity = 0.8 - (_pulseController.value * 0.4);
 
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 180 * scale,
-                          height: 180 * scale,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.neonEmerald.withOpacity(opacity * 0.3),
-                          ),
-                        ),
-                        Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.surfaceDark,
-                            border: Border.all(
-                              color: AppColors.neonEmerald,
-                              width: 3,
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 150 * scale,
+                            height: 150 * scale,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: (state.nfcError != null ? AppColors.neonCoral : AppColors.neonEmerald)
+                                  .withOpacity(opacity * 0.25),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.neonEmerald.withOpacity(0.5),
-                                blurRadius: 20,
+                          ),
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.surfaceDark,
+                              border: Border.all(
+                                color: state.nfcError != null ? AppColors.neonCoral : AppColors.neonEmerald,
+                                width: 3,
                               ),
-                            ],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (state.nfcError != null ? AppColors.neonCoral : AppColors.neonEmerald)
+                                      .withOpacity(0.4),
+                                  blurRadius: 18,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.nfc_rounded,
+                              size: 60,
+                              color: state.nfcError != null ? AppColors.neonCoral : AppColors.neonEmerald,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.nfc_rounded,
-                            size: 72,
-                            color: AppColors.neonEmerald,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    },
+                  ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
-                // Status Message
+                // 3. Status Message
                 Text(
                   state.nfcStatusMessage,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
+                  style: TextStyle(
+                    color: state.nfcError != null ? AppColors.neonCoral : AppColors.textPrimary,
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
-                const Text(
-                  "ألصق أعلى ظهر الآيفون (بجانب الكاميرا) مباشرة على شريحة ظهر البطاقة وثبّت الهاتف دون تحريك حتى اكتمال القراءة (DG1, DG2, DG11, SOD)",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // Linear Progress Indicator
+                // 4. Linear Progress Indicator
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
                     value: state.nfcProgress > 0 ? (state.nfcProgress / 100) : null,
-                    minHeight: 8,
+                    minHeight: 6,
                     backgroundColor: AppColors.surfaceDark,
                     color: AppColors.neonEmerald,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // 5. Visual Placement Guide Box (Instructions for iPhone)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceDark,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderDark),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.tips_and_updates_outlined, color: AppColors.neonGold, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            "تعليمات تثبيت البطاقة على الآيفون:",
+                            style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildGuideRow("1", "انزع غطاء الهاتف (الكفر) السميك إن وجد لتقوية إشارة الـ NFC."),
+                      const SizedBox(height: 8),
+                      _buildGuideRow("2", "ضع أعلى ظهر الآيفون (بجانب الكاميرا مباشرة) ملامساً لظهر البطاقة."),
+                      const SizedBox(height: 8),
+                      _buildGuideRow("3", "ثبّت الهاتف والبطاقة متلاصقين تماماً دون تحريك لمدة 2 إلى 3 ثوانٍ."),
+                    ],
                   ),
                 ),
 
@@ -200,28 +227,81 @@ class _NfcScanViewState extends State<NfcScanView> with SingleTickerProviderStat
                   ),
                 ],
 
-                const Spacer(),
+                const SizedBox(height: 24),
 
-                // Error Retry Button if failed
-                if (state.nfcError != null)
-                  ElevatedButton.icon(
-                    onPressed: () => state.startNfcReading(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text("إعادة المحاولة وتثبيت البطاقة"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.neonCoral,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+                // 6. Action Buttons: Retry & Direct Proceed
+                ElevatedButton.icon(
+                  onPressed: () => state.startNfcReading(),
+                  icon: const Icon(Icons.refresh_rounded, size: 22),
+                  label: const Text(
+                    "إعادة مسح الشريحة (Retry NFC)",
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.neonEmerald,
+                    foregroundColor: Colors.black,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 4,
+                  ),
+                ),
 
                 const SizedBox(height: 12),
+
+                OutlinedButton.icon(
+                  onPressed: () {
+                    // Direct verification transition if tag was read
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const VerificationReportView()),
+                    );
+                  },
+                  icon: const Icon(Icons.verified_user_outlined, color: AppColors.textSecondary, size: 20),
+                  label: const Text(
+                    "عرض تقرير المطابقة والتحقق",
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 44),
+                    side: const BorderSide(color: AppColors.borderDark),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
               ],
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildGuideRow(String number, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.neonEmerald.withOpacity(0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            number,
+            style: const TextStyle(color: AppColors.neonEmerald, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.4),
+          ),
+        ),
+      ],
     );
   }
 }

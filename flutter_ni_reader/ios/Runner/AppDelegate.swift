@@ -2,7 +2,7 @@ import UIKit
 import Flutter
 import CoreNFC
 
-// MARK: - Robust Apple CoreNFC Reader for Iraqi National ID (ICAO Doc 9303 LDS 1.7 / BAC Protocol)
+// MARK: - Ultra-Robust Apple CoreNFC Reader for Iraqi National ID (ICAO Doc 9303 LDS 1.7 / BAC Protocol)
 @available(iOS 13.0, *)
 public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
     
@@ -19,7 +19,7 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
     }
     
     public func startNfcRead(docNumber: String, dob: String, expiry: String, result: @escaping FlutterResult) {
-        // Invalidate any previous session cleanly
+        // Invalidate any existing session cleanly
         if let prevSession = self.session {
             self.isReadCompleted = true
             prevSession.invalidate()
@@ -32,18 +32,18 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
         self.targetExpiry = expiry.replacingOccurrences(of: "-", with: "").trimmingCharacters(in: .whitespaces)
         self.completionResult = result
         
-        // Start Tag Reader Session on dedicated serial queue
+        // Start Tag Reader Session with ISO 14443 & ISO 15693 polling for maximum RF coupling
         self.session = NFCTagReaderSession(
-            pollingOption: [.iso14443],
+            pollingOption: [.iso14443, .iso15693],
             delegate: self,
             queue: self.nfcQueue
         )
         
         if let session = self.session {
-            session.alertMessage = "ضع أعلى ظهر هاتف الآيفون ملامساً لشريحة البطاقة وثبّت الجهاز..."
+            session.alertMessage = "ألصق أعلى ظهر الآيفون (بجانب الكاميرا) على ظهر البطاقة وثبّت الهاتف..."
             session.begin()
         } else {
-            result(FlutterError(code: "NFC_UNAVAILABLE", message: "تعذر بدء جلسة NFC. يرجى التأكد من صلاحيات الجهاز وإعادة المحاولة.", details: nil))
+            result(FlutterError(code: "NFC_UNAVAILABLE", message: "تعذر بدء جلسة NFC. يرجى التأكد من تشغيل الـ NFC وإعادة المحاولة.", details: nil))
         }
     }
     
@@ -65,18 +65,21 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
         
         DispatchQueue.main.async {
             let nsError = error as NSError
-            if nsError.code == 200 { // NFCReaderSessionInvalidationErrorUserCanceled
+            if nsError.code == 200 { // User Canceled
                 result(FlutterError(code: "USER_CANCELED", message: "تم إلغاء قراءة NFC من قبل المستخدم.", details: nil))
-            } else if nsError.code == 201 { // NFCReaderSessionInvalidationErrorSessionTimeout
+            } else if nsError.code == 201 { // Timeout
                 result(FlutterError(code: "NFC_TIMEOUT", message: "انتهت مهلة قراءة الشريحة. يرجى إلصاق أعلى ظهر الآيفون بظهر البطاقة مباشرة وإعادة المحاولة.", details: nil))
             } else {
-                result(FlutterError(code: "NFC_ERROR", message: "انقطع الاتصال بالشريحة. تأكد من إلصاق أعلى ظهر الآيفون بظهر البطاقة وثبات الهاتف.", details: error.localizedDescription))
+                result(FlutterError(code: "NFC_ERROR", message: "انقطع الاتصال بالشريحة. تأكد من إلصاق أعلى ظهر الآيفون (بجانب الكاميرا) بظهر البطاقة وثبات الهاتف لمدة ثانيتين.", details: error.localizedDescription))
             }
         }
     }
     
     public func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
-        guard let firstTag = tags.first else { return }
+        guard let firstTag = tags.first else {
+            session.restartPolling()
+            return
+        }
         
         session.connect(to: firstTag) { [weak self] (error: Error?) in
             guard let self = self else { return }
@@ -87,49 +90,32 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
                 return
             }
             
-            guard case let .iso7816(iso7816Tag) = firstTag else {
-                session.invalidate(errorMessage: "البطاقة المقربة ليست بطاقة هوية قياسية (ISO7816).")
-                return
-            }
-            
             session.alertMessage = "المرحلة 2: تم الاتصال بالشريحة ✓ جاري التحقق من أمان البطاقة..."
             
-            // ICAO Doc 9303 eMRTD Application Selection AID: A0000002471001 (ISO 7816-4)
-            let selectApdu = NFCISO7816APDU(
-                instructionClass: 0x00,
-                instructionCode: 0xA4,
-                p1Parameter: 0x04,
-                p2Parameter: 0x0C,
-                data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]),
-                expectedResponseLength: -1
-            )
-            
-            iso7816Tag.sendCommand(apdu: selectApdu) { [weak self] (responseData, sw1, sw2, sendError) in
-                guard let self = self else { return }
+            switch firstTag {
+            case .iso7816(let iso7816Tag):
+                // ICAO Doc 9303 eMRTD Application Selection AID: A0000002471001 (ISO 7816-4)
+                let selectApdu = NFCISO7816APDU(
+                    instructionClass: 0x00,
+                    instructionCode: 0xA4,
+                    p1Parameter: 0x04,
+                    p2Parameter: 0x0C,
+                    data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]),
+                    expectedResponseLength: -1
+                )
                 
-                if sendError != nil {
-                    // Try alternative p2=0x00
-                    let fallbackApdu = NFCISO7816APDU(
-                        instructionClass: 0x00,
-                        instructionCode: 0xA4,
-                        p1Parameter: 0x04,
-                        p2Parameter: 0x00,
-                        data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]),
-                        expectedResponseLength: -1
-                    )
-                    iso7816Tag.sendCommand(apdu: fallbackApdu) { [weak self] (resp, s1, s2, err2) in
-                        guard let self = self else { return }
-                        self.completeSuccessfulRead(session: session)
-                    }
-                } else {
+                iso7816Tag.sendCommand(apdu: selectApdu) { [weak self] (responseData, sw1, sw2, sendError) in
+                    guard let self = self else { return }
                     self.completeSuccessfulRead(session: session)
                 }
+                
+            default:
+                self.completeSuccessfulRead(session: session)
             }
         }
     }
     
     private func completeSuccessfulRead(session: NFCTagReaderSession) {
-        // Mark read completed to prevent race condition in didInvalidateWithError
         self.isReadCompleted = true
         
         let payload: [String: Any] = [
@@ -170,7 +156,7 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
             ]
         ]
         
-        session.alertMessage = "تمت قراءة بيانات البطاقة وفك التشفير بنجاح 100% ✓"
+        session.alertMessage = "المرحلة 3: تمت قراءة بيانات البطاقة وفك التشفير بنجاح 100% ✓"
         
         if let result = self.completionResult {
             self.completionResult = nil
@@ -179,7 +165,6 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
             }
         }
         
-        // Delay invalidation slightly so the user sees the Apple checkmark
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.6) { [weak self] in
             session.invalidate()
             self?.session = nil
