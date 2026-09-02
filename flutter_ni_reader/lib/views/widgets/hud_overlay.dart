@@ -1,43 +1,55 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
 
-/// Futuristic HUD Corner Brackets for document scanner
+/// Accurate, high-precision HUD overlay matching standard ICAO / ReadID MRZ Scanner interface
 class HudOverlay extends StatelessWidget {
   final String title;
   final String hint;
-  final bool isScanning;
+  final bool isBackScanning;
+  final bool isAutoCapturing;
+  final bool isTorchOn;
+  final VoidCallback? onToggleTorch;
+  final VoidCallback? onManualInput;
+  final VoidCallback? onClose;
+  final VoidCallback? onShare;
 
   const HudOverlay({
     super.key,
     required this.title,
     required this.hint,
-    this.isScanning = true,
+    this.isBackScanning = true,
+    this.isAutoCapturing = false,
+    this.isTorchOn = false,
+    this.onToggleTorch,
+    this.onManualInput,
+    this.onClose,
+    this.onShare,
   });
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isLandscape = size.width > size.height;
-    
-    // Vertical/Tall Card Rectangle (ID-1 Aspect Ratio 54:85.6) so turning phone horizontally scans the card
+
+    // Standard ID-1 Card Aspect Ratio (85.60mm x 53.98mm = ~1.5858)
     final double cardWidth;
     final double cardHeight;
-    
+
     if (isLandscape) {
-      cardHeight = size.height * 0.80;
+      cardHeight = size.height * 0.78;
       cardWidth = cardHeight * (85.60 / 53.98);
     } else {
-      // Tall rectangle in portrait (height > width)
-      cardHeight = size.height * 0.58;
-      cardWidth = cardHeight * (53.98 / 85.60);
+      // Portrait orientation (card is vertical)
+      cardWidth = math.min(size.width * 0.68, 280.0);
+      cardHeight = cardWidth * (85.60 / 53.98);
     }
 
     return Stack(
       children: [
-        // Semi-transparent darkened background with clear cutout
+        // 1. Semi-transparent darkened vignette overlay with clear rounded rectangle cutout
         ColorFiltered(
           colorFilter: ColorFilter.mode(
-            Colors.black.withOpacity(0.65),
+            Colors.black.withOpacity(0.72),
             BlendMode.srcOut,
           ),
           child: Stack(
@@ -55,7 +67,7 @@ class HudOverlay extends StatelessWidget {
                   height: cardHeight,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(22),
                   ),
                 ),
               ),
@@ -63,102 +75,252 @@ class HudOverlay extends StatelessWidget {
           ),
         ),
 
-        // Glowing Green Neon Rectangle Frame (Bounding Box)
+        // 2. Crisp White Rounded Rectangle Border Frame & Internal Guides
         Center(
-          child: Container(
+          child: SizedBox(
             width: cardWidth,
             height: cardHeight,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.neonEmerald,
-                width: 2.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.neonEmerald.withOpacity(0.35),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
             child: Stack(
               children: [
-                // 4 Thick Glowing Corner Brackets
-                const Positioned(top: 0, left: 0, child: _CornerBracket(isTop: true, isLeft: true)),
-                const Positioned(top: 0, right: 0, child: _CornerBracket(isTop: true, isLeft: false)),
-                const Positioned(bottom: 0, left: 0, child: _CornerBracket(isTop: false, isLeft: true)),
-                const Positioned(bottom: 0, right: 0, child: _CornerBracket(isTop: false, isLeft: false)),
-                
-                // Active Green Scanning Laser Line
-                if (isScanning) const _LaserScanAnimation(),
+                // Solid White Border
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: isAutoCapturing ? const Color(0xFF10B981) : Colors.white,
+                      width: 2.2,
+                    ),
+                    boxShadow: isAutoCapturing
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withOpacity(0.6),
+                              blurRadius: 18,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
+                  ),
+                ),
+
+                // 3-Row MRZ Chevron Position Guide (Left side of card in portrait)
+                if (isBackScanning)
+                  Positioned(
+                    left: 14,
+                    top: 24,
+                    bottom: 24,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildChevronColumn(),
+                        const SizedBox(width: 5),
+                        _buildChevronColumn(),
+                        const SizedBox(width: 5),
+                        _buildChevronColumn(),
+                      ],
+                    ),
+                  ),
+
+                // Small diamond marker at bottom center of the card
+                Positioned(
+                  bottom: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Transform.rotate(
+                      angle: math.pi / 4,
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Subtle vertical scanning laser bar during auto-detection
+                if (isAutoCapturing) const _LiveScanBar(),
               ],
             ),
           ),
         ),
 
-        // Header and Instruction Hints
-        Positioned(
-          top: 60,
-          left: 20,
-          right: 20,
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceDark.withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.neonEmerald, width: 1),
-                ),
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+        // 3. Side Instruction Pill Badge ("Align back of identity card here")
+        if (!isLandscape)
+          Positioned(
+            right: (size.width - cardWidth) / 4 - 24,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: RotatedBox(
+                quarterTurns: 1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xE6141414),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.18),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    isBackScanning
+                        ? "Align back of identity card here"
+                        : "Align front of identity card here",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                hint,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 14,
+            ),
+          ),
+
+        // 4. Top Action Buttons (Share & Dismiss)
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildCircularButton(
+                  icon: Icons.ios_share_rounded,
+                  onTap: onShare ?? () {},
                 ),
+                _buildCircularButton(
+                  icon: Icons.keyboard_arrow_up_rounded,
+                  onTap: onClose ?? () => Navigator.of(context).maybePop(),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // 5. Bottom Action Controls (Manual Input & Torch & Auto-capture indicator)
+        SafeArea(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Manual Input Button
+                  _buildBottomActionButton(
+                    icon: Icons.keyboard_alt_outlined,
+                    label: "Manual input",
+                    subLabel: "إدخال يدوي",
+                    onTap: onManualInput,
+                  ),
+
+                  // Torch Flash Toggle Button
+                  _buildBottomActionButton(
+                    icon: isTorchOn ? Icons.flashlight_on_rounded : Icons.flashlight_off_rounded,
+                    label: "Torch",
+                    subLabel: isTorchOn ? "مفعل" : "الفلاش",
+                    iconColor: isTorchOn ? const Color(0xFFFFD700) : Colors.white,
+                    onTap: onToggleTorch,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
-}
 
-class _CornerBracket extends StatelessWidget {
-  final bool isTop;
-  final bool isLeft;
-
-  const _CornerBracket({required this.isTop, required this.isLeft});
-
-  @override
-  Widget build(BuildContext context) {
-    const double length = 28;
-    const double thickness = 3.5;
-    const Color color = AppColors.neonEmerald;
-
-    return Container(
-      width: length,
-      height: length,
-      decoration: BoxDecoration(
-        border: Border(
-          top: isTop ? const BorderSide(color: color, width: thickness) : BorderSide.none,
-          bottom: !isTop ? const BorderSide(color: color, width: thickness) : BorderSide.none,
-          left: isLeft ? const BorderSide(color: color, width: thickness) : BorderSide.none,
-          right: !isLeft ? const BorderSide(color: color, width: thickness) : BorderSide.none,
+  /// Builds a single vertical column of caret / chevron symbols `<`
+  Widget _buildChevronColumn() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(
+        26,
+        (index) => const Text(
+          "<",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            height: 0.9,
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCircularButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0x80222222),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
+        ),
+        child: Icon(icon, color: Colors.white, size: 24),
+      ),
+    );
+  }
+
+  Widget _buildBottomActionButton({
+    required IconData icon,
+    required String label,
+    required String subLabel,
+    Color iconColor = Colors.white,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0x99252525),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.16), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
