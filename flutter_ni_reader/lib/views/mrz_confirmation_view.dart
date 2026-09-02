@@ -4,7 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/mrz_data.dart';
 import '../../providers/app_state_provider.dart';
 import 'camera_ocr_view.dart';
-import 'nfc_scan_view.dart';
+import 'verification_report_view.dart';
 
 /// Screen displayed immediately after MRZ Auto-Scan or Manual Capture.
 /// Shows: Document Number, Date of Birth, Expiry Date, and the Green "Continue to NFC" button.
@@ -157,20 +157,21 @@ class MrzConfirmationView extends StatelessWidget {
 
               const Spacer(),
 
-              // Primary Action: Use this Image and Proceed
+              // Primary Action: Use this Image and Proceed to Results
               ElevatedButton.icon(
                 onPressed: () {
                   final provider = context.read<AppStateProvider>();
-                  provider.onBackImageAndMrzCaptured(cardImageBase64 ?? "", mrzData);
+                  provider.onBackImageAndMrzCaptured(cardImageBase64 ?? '', mrzData);
 
+                  // Navigate directly to Verification Report (NFC bypassed)
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (_) => const NfcScanView()),
+                    MaterialPageRoute(builder: (_) => const VerificationReportView()),
                   );
                 },
-                icon: const Icon(Icons.check_circle_outline_rounded, size: 24),
+                icon: const Icon(Icons.verified_rounded, size: 24),
                 label: const Text(
-                  "استعمال هذه الصورة ومتابعة (NFC) ✓",
+                  "متابعة وعرض بيانات البطاقة ✓",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(

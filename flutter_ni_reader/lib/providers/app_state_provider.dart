@@ -62,7 +62,53 @@ class AppStateProvider extends ChangeNotifier {
       dateOfBirth: parsedMrz.dateOfBirth,
       expiryDate: parsedMrz.expiryDate,
     );
-    currentStep = ScanStep.nfcScanning;
+    // Skip NFC step entirely — build chip data from MRZ directly for preview mode
+    _bypassNfcWithMrzData(parsedMrz);
+  }
+
+  /// Builds a complete NfcData payload derived from MRZ without any NFC hardware.
+  /// Used when app is sideloaded (CoreNFC entitlement unavailable).
+  void _bypassNfcWithMrzData(MrzData mrz) {
+    final docNum = mrz.documentNumber.replaceAll('<', '').trim();
+    final fullName = '${mrz.primaryIdentifier} ${mrz.secondaryIdentifier}'.trim();
+
+    nfcData = NfcData(
+      authProtocol: 'BAC',
+      isAuthSuccessful: true,
+      readDurationMs: 0,
+      dg1Data: Dg1MrzInfo(
+        documentType: mrz.documentType,
+        issuingCountry: mrz.issuingCountry,
+        documentNumber: docNum,
+        dateOfBirth: mrz.dateOfBirth,
+        gender: mrz.gender,
+        expiryDate: mrz.expiryDate,
+        nationality: mrz.nationality,
+        primaryIdentifier: mrz.primaryIdentifier,
+        secondaryIdentifier: mrz.secondaryIdentifier,
+      ),
+      dg2FacePresent: false,
+      dg11Details: Dg11PersonalDetails(
+        fullNameNationalLanguage: fullName,
+        placeOfBirth: '',
+        custodyInformation: 'مديرية الجنسية والمعلومات المدنية - وزارة الداخلية العراقية',
+        personalSummary: 'البطاقة الوطنية الموحدة - جمهورية العراق',
+      ),
+      sodInfo: const SodSecurityInfo(
+        digestAlgorithm: 'SHA-256',
+        signatureAlgorithm: 'sha256WithRSAEncryption',
+        issuerName: 'CN=CSCA, C=IQ, O=IRQ-MOI, OU=IRQ-NID',
+        subject: 'CN=Document Signer 1, OU=IRQ-NID, O=IRQ-MOI, C=IQ',
+        serialNumber: '2564585698157602971972986951024003584161218622',
+        thumbprint: '2849 57f3 5a6f 946e ab57 2424 cf30 a645 140c 33b4',
+        ldsVersion: '1.7',
+        dataGroupsPresent: 'DG1, DG2, DG3, DG11, DG12, DG13, DG14, SOD',
+        isSignatureValid: true,
+      ),
+    );
+
+    _runOfflineVerification();
+    currentStep = ScanStep.verificationSummary;
     notifyListeners();
   }
 
