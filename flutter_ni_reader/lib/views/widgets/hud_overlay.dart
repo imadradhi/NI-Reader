@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Accurate, high-precision HUD overlay matching standard ICAO / ReadID MRZ Scanner interface
+/// Accurate, high-precision HUD overlay matching horizontal standard ID-1 card (85.60mm x 53.98mm)
 class HudOverlay extends StatelessWidget {
   final String title;
   final String hint;
@@ -35,18 +35,11 @@ class HudOverlay extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final isLandscape = size.width > size.height;
 
-    // Standard ID-1 Card Aspect Ratio (85.60mm x 53.98mm = ~1.5858)
-    final double cardWidth;
-    final double cardHeight;
-
-    if (isLandscape) {
-      cardHeight = size.height * 0.78;
-      cardWidth = cardHeight * (85.60 / 53.98);
-    } else {
-      // Portrait orientation (card is vertical)
-      cardWidth = math.min(size.width * 0.68, 280.0);
-      cardHeight = cardWidth * (85.60 / 53.98);
-    }
+    // Standard ID-1 Horizontal Card Aspect Ratio (85.60mm / 53.98mm = ~1.5858)
+    final double cardWidth = isLandscape
+        ? math.min(size.width * 0.62, 480.0)
+        : math.min(size.width * 0.90, 360.0);
+    final double cardHeight = cardWidth / (85.60 / 53.98);
 
     final bool isCountingDown = countdownSeconds > 0;
 
@@ -73,7 +66,7 @@ class HudOverlay extends StatelessWidget {
                   height: cardHeight,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                 ),
               ),
@@ -81,17 +74,55 @@ class HudOverlay extends StatelessWidget {
           ),
         ),
 
-        // 2. Crisp White/Green Rounded Rectangle Border Frame & Internal Guides
+        // 2. Top Instruction Pill Badge ("Align back of identity card here")
+        Positioned(
+          top: math.max((size.height - cardHeight) / 2 - 56, 40),
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
+              decoration: BoxDecoration(
+                color: isCountingDown ? const Color(0xE60F2A1D) : const Color(0xE61E1E1E),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: isCountingDown ? const Color(0xFF10B981) : Colors.white.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Text(
+                isBackScanning
+                    ? "Align back of identity card here"
+                    : "Align front of identity card here",
+                style: TextStyle(
+                  color: isCountingDown ? const Color(0xFF10B981) : Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // 3. Crisp White/Green Rounded Rectangle Border Frame & Internal Guides
         Center(
           child: SizedBox(
             width: cardWidth,
             height: cardHeight,
             child: Stack(
               children: [
-                // Solid Border (Turns vibrant emerald green when locked & counting down)
+                // Solid Border (Turns emerald green with glow when locked & counting down)
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: isCountingDown ? const Color(0xFF10B981) : Colors.white,
                       width: isCountingDown ? 3.0 : 2.2,
@@ -99,7 +130,7 @@ class HudOverlay extends StatelessWidget {
                     boxShadow: isCountingDown
                         ? [
                             BoxShadow(
-                              color: const Color(0xFF10B981).withOpacity(0.6),
+                              color: const Color(0xFF10B981).withOpacity(0.65),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -108,49 +139,29 @@ class HudOverlay extends StatelessWidget {
                   ),
                 ),
 
-                // 3-Row MRZ Guide Lines with `>` Symbol (Left side of card in portrait)
+                // 3 Horizontal Rows of MRZ Guide Symbols `>>>>` positioned at the bottom of the card
                 if (isBackScanning)
                   Positioned(
+                    bottom: 12,
                     left: 14,
-                    top: 24,
-                    bottom: 24,
-                    child: Row(
+                    right: 14,
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildChevronColumn(),
-                        const SizedBox(width: 5),
-                        _buildChevronColumn(),
-                        const SizedBox(width: 5),
-                        _buildChevronColumn(),
+                        _buildHorizontalChevronRow(),
+                        const SizedBox(height: 3),
+                        _buildHorizontalChevronRow(),
+                        const SizedBox(height: 3),
+                        _buildHorizontalChevronRow(),
                       ],
                     ),
                   ),
-
-                // Small diamond marker at bottom center of the card
-                Positioned(
-                  bottom: 12,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Transform.rotate(
-                      angle: math.pi / 4,
-                      child: Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: isCountingDown ? const Color(0xFF10B981) : Colors.white.withOpacity(0.85),
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
 
                 // 3-Second Stability Circular Countdown Badge in Center
                 if (isCountingDown)
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.85),
                         borderRadius: BorderRadius.circular(16),
@@ -169,8 +180,8 @@ class HudOverlay extends StatelessWidget {
                             alignment: Alignment.center,
                             children: [
                               SizedBox(
-                                width: 48,
-                                height: 48,
+                                width: 46,
+                                height: 46,
                                 child: CircularProgressIndicator(
                                   value: stabilityProgress,
                                   strokeWidth: 4,
@@ -188,7 +199,7 @@ class HudOverlay extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           const Text(
                             "ثبّت البطاقة...",
                             style: TextStyle(
@@ -202,59 +213,17 @@ class HudOverlay extends StatelessWidget {
                     ),
                   ),
 
-                // Subtle vertical scanning laser bar during auto-detection
+                // Scanning laser bar
                 if (isAutoCapturing && !isCountingDown) const _LiveScanBar(),
               ],
             ),
           ),
         ),
 
-        // 3. Side Instruction Pill Badge ("Align back of identity card here")
-        if (!isLandscape)
-          Positioned(
-            right: (size.width - cardWidth) / 4 - 24,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: RotatedBox(
-                quarterTurns: 1,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isCountingDown ? const Color(0xE60F2A1D) : const Color(0xE6141414),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(
-                      color: isCountingDown ? const Color(0xFF10B981) : Colors.white.withOpacity(0.18),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    isBackScanning
-                        ? "Align back of identity card here"
-                        : "Align front of identity card here",
-                    style: TextStyle(
-                      color: isCountingDown ? const Color(0xFF10B981) : Colors.white,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
         // 4. Top Action Buttons (Share & Dismiss)
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -263,7 +232,7 @@ class HudOverlay extends StatelessWidget {
                   onTap: onShare ?? () {},
                 ),
                 _buildCircularButton(
-                  icon: Icons.keyboard_arrow_up_rounded,
+                  icon: Icons.close_rounded,
                   onTap: onClose ?? () => Navigator.of(context).maybePop(),
                 ),
               ],
@@ -271,34 +240,53 @@ class HudOverlay extends StatelessWidget {
           ),
         ),
 
-        // 5. Bottom Action Controls (Manual Input & Torch & Auto-capture indicator)
+        // 5. Action Controls (Manual Input & Torch)
         SafeArea(
           child: Align(
-            alignment: Alignment.bottomCenter,
+            alignment: isLandscape ? Alignment.centerRight : Alignment.bottomCenter,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Manual Input Button
-                  _buildBottomActionButton(
-                    icon: Icons.keyboard_alt_outlined,
-                    label: "Manual input",
-                    subLabel: "إدخال يدوي",
-                    onTap: onManualInput,
-                  ),
-
-                  // Torch Flash Toggle Button
-                  _buildBottomActionButton(
-                    icon: isTorchOn ? Icons.flashlight_on_rounded : Icons.flashlight_off_rounded,
-                    label: "Torch",
-                    subLabel: isTorchOn ? "مفعل" : "الفلاش",
-                    iconColor: isTorchOn ? const Color(0xFFFFD700) : Colors.white,
-                    onTap: onToggleTorch,
-                  ),
-                ],
-              ),
+              padding: isLandscape
+                  ? const EdgeInsets.only(right: 20)
+                  : const EdgeInsets.only(bottom: 28, left: 24, right: 24),
+              child: isLandscape
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildBottomActionButton(
+                          icon: Icons.keyboard_alt_outlined,
+                          label: "Manual input",
+                          subLabel: "إدخال يدوي",
+                          onTap: onManualInput,
+                        ),
+                        const SizedBox(height: 20),
+                        _buildBottomActionButton(
+                          icon: isTorchOn ? Icons.flashlight_on_rounded : Icons.flashlight_off_rounded,
+                          label: "Torch",
+                          subLabel: isTorchOn ? "مفعل" : "الفلاش",
+                          iconColor: isTorchOn ? const Color(0xFFFFD700) : Colors.white,
+                          onTap: onToggleTorch,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _buildBottomActionButton(
+                          icon: Icons.keyboard_alt_outlined,
+                          label: "Manual input",
+                          subLabel: "إدخال يدوي",
+                          onTap: onManualInput,
+                        ),
+                        _buildBottomActionButton(
+                          icon: isTorchOn ? Icons.flashlight_on_rounded : Icons.flashlight_off_rounded,
+                          label: "Torch",
+                          subLabel: isTorchOn ? "مفعل" : "الفلاش",
+                          iconColor: isTorchOn ? const Color(0xFFFFD700) : Colors.white,
+                          onTap: onToggleTorch,
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),
@@ -306,18 +294,18 @@ class HudOverlay extends StatelessWidget {
     );
   }
 
-  /// Builds a single vertical column of chevron guide symbols `>`
-  Widget _buildChevronColumn() {
-    return Column(
+  /// Builds a single horizontal row of chevron guide symbols `> > > > > > > > > > > > > > > > > > > > > > > > > > > > > >`
+  Widget _buildHorizontalChevronRow() {
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(
-        26,
+        30,
         (index) => const Text(
           ">",
           style: TextStyle(
             color: Colors.white,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w900,
             height: 0.9,
           ),
         ),
@@ -332,14 +320,14 @@ class HudOverlay extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
           color: const Color(0x80222222),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
+          border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
         ),
-        child: Icon(icon, color: Colors.white, size: 24),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }
@@ -357,12 +345,12 @@ class HudOverlay extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: const Color(0x99252525),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.16), width: 1),
+              border: Border.all(color: Colors.white.withOpacity(0.18), width: 1),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.35),
@@ -371,14 +359,14 @@ class HudOverlay extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, color: iconColor, size: 24),
+            child: Icon(icon, color: iconColor, size: 22),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 12.5,
+              fontSize: 11.5,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -419,14 +407,12 @@ class _LiveScanBarState extends State<_LiveScanBar> with SingleTickerProviderSta
       animation: _controller,
       builder: (context, child) {
         return Align(
-          alignment: Alignment((_controller.value * 2) - 1, 0),
+          alignment: Alignment(0, (_controller.value * 2) - 1),
           child: Container(
-            width: 2.5,
-            margin: const EdgeInsets.symmetric(vertical: 12),
+            height: 2.5,
+            margin: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
                 colors: [
                   const Color(0xFF10B981).withOpacity(0.0),
                   const Color(0xFF10B981),
