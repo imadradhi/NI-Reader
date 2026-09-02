@@ -161,7 +161,7 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
 // MARK: - Flutter App Delegate
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
-    private var nfcBridge: IraqiNfcNativeBridge?
+    private var nfcBridge: Any?
 
     override func application(
         _ application: UIApplication,
