@@ -164,14 +164,14 @@ class _CornerBracket extends StatelessWidget {
   }
 }
 
-class _LaserScanAnimation extends StatefulWidget {
-  const _LaserScanAnimation();
+class _LiveScanBar extends StatefulWidget {
+  const _LiveScanBar();
 
   @override
-  State<_LaserScanAnimation> createState() => _LaserScanAnimationState();
+  State<_LiveScanBar> createState() => _LiveScanBarState();
 }
 
-class _LaserScanAnimationState extends State<_LaserScanAnimation> with SingleTickerProviderStateMixin {
+class _LiveScanBarState extends State<_LiveScanBar> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -179,7 +179,7 @@ class _LaserScanAnimationState extends State<_LaserScanAnimation> with SingleTic
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
   }
 
@@ -195,22 +195,24 @@ class _LaserScanAnimationState extends State<_LaserScanAnimation> with SingleTic
       animation: _controller,
       builder: (context, child) {
         return Align(
-          alignment: Alignment(0, (_controller.value * 2) - 1),
+          alignment: Alignment((_controller.value * 2) - 1, 0),
           child: Container(
-            height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
+            width: 2.5,
+            margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
                 colors: [
-                  AppColors.neonCyan.withOpacity(0.0),
-                  AppColors.neonCyan,
-                  AppColors.neonEmerald,
-                  AppColors.neonCyan.withOpacity(0.0),
+                  const Color(0xFF10B981).withOpacity(0.0),
+                  const Color(0xFF10B981),
+                  const Color(0xFF00E5FF),
+                  const Color(0xFF10B981).withOpacity(0.0),
                 ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.neonCyan.withOpacity(0.8),
+                  color: const Color(0xFF10B981).withOpacity(0.85),
                   blurRadius: 10,
                   spreadRadius: 2,
                 )

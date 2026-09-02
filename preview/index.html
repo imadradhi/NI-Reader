@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>معاينة تفاعلية لتطبيق قارئ البطاقة الوطنية العراقية (Flutter NI-Reader)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-dark: #0A0E17;
@@ -201,8 +204,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* View 1: Home Dashboard */
@@ -246,9 +256,20 @@
         }
 
         @keyframes pulseAnim {
-            0% { transform: scale(0.9); opacity: 1; }
-            50% { transform: scale(1.4); opacity: 0.5; }
-            100% { transform: scale(0.9); opacity: 1; }
+            0% {
+                transform: scale(0.9);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.4);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(0.9);
+                opacity: 1;
+            }
         }
 
         .hero-banner {
@@ -331,24 +352,57 @@
             border-width: 0;
         }
 
-        .hud-tl { top: -2px; left: -2px; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 8px; }
-        .hud-tr { top: -2px; right: -2px; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 8px; }
-        .hud-bl { bottom: -2px; left: -2px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 8px; }
-        .hud-br { bottom: -2px; right: -2px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 8px; }
-
-        .laser-scan-line {
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--neon-cyan), var(--neon-emerald), transparent);
-            box-shadow: 0 0 10px var(--neon-cyan);
-            position: absolute;
-            top: 10%;
-            animation: laserMove 2s ease-in-out infinite alternate;
+        .hud-tl {
+            top: -2px;
+            left: -2px;
+            border-top-width: 3px;
+            border-left-width: 3px;
+            border-top-left-radius: 8px;
         }
 
-        @keyframes laserMove {
-            0% { top: 10%; }
-            100% { top: 90%; }
+        .hud-tr {
+            top: -2px;
+            right: -2px;
+            border-top-width: 3px;
+            border-right-width: 3px;
+            border-top-right-radius: 8px;
+        }
+
+        .hud-bl {
+            bottom: -2px;
+            left: -2px;
+            border-bottom-width: 3px;
+            border-left-width: 3px;
+            border-bottom-left-radius: 8px;
+        }
+
+        .hud-br {
+            bottom: -2px;
+            right: -2px;
+            border-bottom-width: 3px;
+            border-right-width: 3px;
+            border-bottom-right-radius: 8px;
+        }
+
+        .laser-scan-line {
+            width: 2.5px;
+            height: 90%;
+            background: linear-gradient(180deg, transparent, var(--neon-cyan), var(--neon-emerald), transparent);
+            box-shadow: 0 0 12px var(--neon-cyan);
+            position: absolute;
+            left: 10%;
+            top: 5%;
+            animation: laserMoveVertical 1.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes laserMoveVertical {
+            0% {
+                left: 10%;
+            }
+
+            100% {
+                left: 90%;
+            }
         }
 
         .mrz-detected-box {
@@ -406,8 +460,15 @@
         }
 
         @keyframes radarWave {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.7); opacity: 0; }
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.7);
+                opacity: 0;
+            }
         }
 
         .dg-progress-list {
@@ -428,7 +489,9 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .dg-item:last-child { border-bottom: none; }
+        .dg-item:last-child {
+            border-bottom: none;
+        }
 
         /* View 5: Verification Report */
         .verdict-badge {
@@ -475,244 +538,276 @@
         }
     </style>
 </head>
+
 <body>
 
-<div class="showcase-container">
+    <div class="showcase-container">
 
-    <!-- Left Controls Panel -->
-    <div class="controls-panel">
-        <div class="controls-title">
-            <span>⚡ المعاينة التفاعلية لتطبيق Flutter</span>
-        </div>
-        <p class="controls-desc">
-            جرّب شاشات وتدفق قارئ البطاقة الوطنية العراقية كاملة (من الكاميرا والـ OCR حتى قراءة شريحة الـ NFC والمطابقة وإرسال البيانات للحاسوب):
-        </p>
-
-        <div class="step-tabs">
-            <button class="step-btn active" onclick="switchStep(1)">
-                <span>1. الشاشة الرئيسية والاتصال (Home)</span>
-                <span class="badge-step">1</span>
-            </button>
-            <button class="step-btn" onclick="switchStep(2)">
-                <span>2. تصوير الوجه الأمامي (Front Capture)</span>
-                <span class="badge-step">2</span>
-            </button>
-            <button class="step-btn" onclick="switchStep(3)">
-                <span>3. مسح الـ MRZ والوجه الخلفي (OCR Scan)</span>
-                <span class="badge-step">3</span>
-            </button>
-            <button class="step-btn" onclick="switchStep(4)">
-                <span>4. قراءة الشريحة الذكية (NFC Radar)</span>
-                <span class="badge-step">4</span>
-            </button>
-            <button class="step-btn" onclick="switchStep(5)">
-                <span>5. تقرير التحقق النهائي (Verification & API)</span>
-                <span class="badge-step">5</span>
-            </button>
-        </div>
-
-        <div style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 12px; border: 1px solid var(--border-dark); font-size: 12px;">
-            <div style="color: var(--neon-gold); font-weight: 700; margin-bottom: 4px;">📌 مزايا الواجهة في Flutter:</div>
-            <div style="color: var(--text-secondary); line-height: 1.5;">
-                • تدعم نظام RTL والعربية بالكامل.<br>
-                • تصميم Dark Luxury بظلال Glassmorphic حديثة.<br>
-                • جاهزة للتصدير كـ <strong>APK</strong> و <strong>IPA</strong>.
+        <!-- Left Controls Panel -->
+        <div class="controls-panel">
+            <div class="controls-title">
+                <span>⚡ المعاينة التفاعلية لتطبيق Flutter</span>
             </div>
-        </div>
-    </div>
+            <p class="controls-desc">
+                جرّب شاشات وتدفق قارئ البطاقة الوطنية العراقية كاملة (من الكاميرا والـ OCR حتى قراءة شريحة الـ NFC
+                والمطابقة وإرسال البيانات للحاسوب):
+            </p>
 
-    <!-- Phone Simulator Frame -->
-    <div class="phone-mockup">
-        <div class="notch"></div>
-        <div class="phone-screen">
-            <!-- Status Bar -->
-            <div class="phone-status-bar">
-                <span>09:41</span>
-                <span>5G 📶 100% 🔋</span>
+            <div class="step-tabs">
+                <button class="step-btn active" onclick="switchStep(1)">
+                    <span>1. الشاشة الرئيسية والاتصال (Home)</span>
+                    <span class="badge-step">1</span>
+                </button>
+                <button class="step-btn" onclick="switchStep(2)">
+                    <span>2. تصوير الوجه الأمامي (Front Capture)</span>
+                    <span class="badge-step">2</span>
+                </button>
+                <button class="step-btn" onclick="switchStep(3)">
+                    <span>3. مسح الـ MRZ والوجه الخلفي (OCR Scan)</span>
+                    <span class="badge-step">3</span>
+                </button>
+                <button class="step-btn" onclick="switchStep(4)">
+                    <span>4. قراءة الشريحة الذكية (NFC Radar)</span>
+                    <span class="badge-step">4</span>
+                </button>
+                <button class="step-btn" onclick="switchStep(5)">
+                    <span>5. تقرير التحقق النهائي (Verification & API)</span>
+                    <span class="badge-step">5</span>
+                </button>
             </div>
 
-            <!-- VIEW 1: HOME -->
-            <div class="app-view active" id="view-1">
-                <div class="header-bar">
-                    <div class="app-logo-title">
-                        <span style="color: var(--neon-emerald);">💳</span>
-                        <span>قارئ البطاقة الموحدة</span>
+            <div
+                style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 12px; border: 1px solid var(--border-dark); font-size: 12px;">
+                <div style="color: var(--neon-gold); font-weight: 700; margin-bottom: 4px;">📌 مزايا الواجهة في Flutter:
+                </div>
+                <div style="color: var(--text-secondary); line-height: 1.5;">
+                    • تدعم نظام RTL والعربية بالكامل.<br>
+                    • تصميم Dark Luxury بظلال Glassmorphic حديثة.<br>
+                    • جاهزة للتصدير كـ <strong>APK</strong> و <strong>IPA</strong>.
+                </div>
+            </div>
+        </div>
+
+        <!-- Phone Simulator Frame -->
+        <div class="phone-mockup">
+            <div class="notch"></div>
+            <div class="phone-screen">
+                <!-- Status Bar -->
+                <div class="phone-status-bar">
+                    <span>09:41</span>
+                    <span>5G 📶 100% 🔋</span>
+                </div>
+
+                <!-- VIEW 1: HOME -->
+                <div class="app-view active" id="view-1">
+                    <div class="header-bar">
+                        <div class="app-logo-title">
+                            <span style="color: var(--neon-emerald);">💳</span>
+                            <span>قارئ البطاقة الموحدة</span>
+                        </div>
+                        <div class="pulsing-pill">
+                            <div class="pulse-dot"></div>
+                            <span>متصل بالحاسوب</span>
+                        </div>
                     </div>
-                    <div class="pulsing-pill">
-                        <div class="pulse-dot"></div>
-                        <span>متصل بالحاسوب</span>
+
+                    <div class="hero-banner">
+                        <div class="hero-icon">📸</div>
+                        <h3 style="font-size: 18px; margin-bottom: 6px;">دورة القراءة والتحقق الكاملة</h3>
+                        <p style="font-size: 12px; color: var(--text-secondary);">
+                            التقاط الوجهين (OCR) + قراءة شريحة الـ NFC والمطابقة وإرسال البيانات
+                        </p>
+                        <button class="primary-action-btn" onclick="switchStep(2)">
+                            <span>بدء قراءة البطاقة</span>
+                            <span>←</span>
+                        </button>
+                    </div>
+
+                    <div style="background: var(--surface-dark); border-radius: 14px; padding: 16px; border: 1px solid var(--border-dark); margin-bottom: 12px; cursor: pointer;"
+                        onclick="switchStep(4)">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 24px; color: var(--neon-gold);">📡</span>
+                            <div>
+                                <div style="font-weight: 700; font-size: 14px;">قراءة NFC المباشرة (BAC)</div>
+                                <div style="font-size: 11px; color: var(--text-secondary);">إدخال المفاتيح واختبار
+                                    الشريحة فوراً</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        style="background: rgba(39, 53, 73, 0.4); border-radius: 14px; padding: 14px; border: 1px solid var(--border-dark); font-size: 11px; color: var(--text-secondary); margin-top: auto;">
+                        🔒 Zero-Persistence: لا يتم تخزين أي صور أو بيانات شخصية محلياً في الهاتف.
                     </div>
                 </div>
 
-                <div class="hero-banner">
-                    <div class="hero-icon">📸</div>
-                    <h3 style="font-size: 18px; margin-bottom: 6px;">دورة القراءة والتحقق الكاملة</h3>
-                    <p style="font-size: 12px; color: var(--text-secondary);">
-                        التقاط الوجهين (OCR) + قراءة شريحة الـ NFC والمطابقة وإرسال البيانات
-                    </p>
-                    <button class="primary-action-btn" onclick="switchStep(2)">
-                        <span>بدء قراءة البطاقة</span>
-                        <span>←</span>
+                <!-- VIEW 2: FRONT CAPTURE -->
+                <div class="app-view" id="view-2">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; font-size: 15px;">تصوير الوجه الأمامي</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">ضع البطاقة داخل الإطار التوجيهي
+                        </div>
+                    </div>
+
+                    <div class="camera-container">
+                        <div class="hud-card-guide">
+                            <div class="hud-corner hud-tl"></div>
+                            <div class="hud-corner hud-tr"></div>
+                            <div class="hud-corner hud-bl"></div>
+                            <div class="hud-corner hud-br"></div>
+                            <div
+                                style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.2); font-size: 40px;">
+                                🆔
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="primary-action-btn" onclick="switchStep(3)">
+                        <span>التقاط الوجه الأمامي ومتابعة</span>
                     </button>
                 </div>
 
-                <div style="background: var(--surface-dark); border-radius: 14px; padding: 16px; border: 1px solid var(--border-dark); margin-bottom: 12px; cursor: pointer;" onclick="switchStep(4)">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="font-size: 24px; color: var(--neon-gold);">📡</span>
+                <!-- VIEW 3: BACK MRZ OCR -->
+                <div class="app-view" id="view-3">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; font-size: 15px; color: var(--neon-cyan);">مسح أسطر الـ MRZ (OCR)
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">جاري الكشف البصري وحساب الـ Check
+                            Digits</div>
+                    </div>
+
+                    <div class="camera-container">
+                        <div class="hud-card-guide">
+                            <div class="hud-corner hud-tl"></div>
+                            <div class="hud-corner hud-tr"></div>
+                            <div class="hud-corner hud-bl"></div>
+                            <div class="hud-corner hud-br"></div>
+                            <div class="laser-scan-line"></div>
+                        </div>
+                        <div class="mrz-detected-box">
+                            IDIRQAZ9431882&lt;8199503201234&lt;&lt;<br>
+                            9503206M3503201IRQ&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;2<br>
+                            AL&lt;&lt;MOUSAWI&lt;&lt;AHMED&lt;ALI&lt;MOHAMME
+                        </div>
+                    </div>
+
+                    <button class="primary-action-btn" onclick="switchStep(4)">
+                        <span>تم التعرف على MRZ - انتقال لـ NFC</span>
+                    </button>
+                </div>
+
+                <!-- VIEW 4: NFC SCAN -->
+                <div class="app-view" id="view-4">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; font-size: 15px; color: var(--neon-emerald);">قراءة الشريحة
+                            الإلكترونية (NFC)</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">مفتاح BAC: AZ9431882 | 950320 |
+                            350320</div>
+                    </div>
+
+                    <div class="nfc-scan-area">
+                        <div class="radar-circle">
+                            <div class="radar-wave"></div>
+                            📡
+                        </div>
+                        <div style="font-weight: 700; font-size: 16px; margin-bottom: 6px;">قرّب البطاقة من ظهر
+                            الهاتف...</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">جاري استخراج المجموعات البيومترية
+                        </div>
+
+                        <div class="dg-progress-list">
+                            <div class="dg-item"><span>DG1 (MRZ Data)</span><span style="color: var(--neon-emerald);">✔
+                                    مكتمل</span></div>
+                            <div class="dg-item"><span>DG2 (Biometric Photo)</span><span
+                                    style="color: var(--neon-emerald);">✔ مكتمل (96KB)</span></div>
+                            <div class="dg-item"><span>DG11 (Full Details)</span><span
+                                    style="color: var(--neon-emerald);">✔ مكتمل</span></div>
+                            <div class="dg-item"><span>SOD (Digital Signature)</span><span
+                                    style="color: var(--neon-emerald);">✔ موثق</span></div>
+                        </div>
+                    </div>
+
+                    <button class="primary-action-btn" onclick="switchStep(5)">
+                        <span>عرض تقرير المطابقة الشامل</span>
+                    </button>
+                </div>
+
+                <!-- VIEW 5: VERIFICATION REPORT -->
+                <div class="app-view" id="view-5">
+                    <div style="text-align: center; margin-bottom: 12px;">
+                        <div style="font-weight: 900; font-size: 16px;">تقرير المطابقة والتحقق النهائي</div>
+                    </div>
+
+                    <div class="verdict-badge">
+                        <span style="font-size: 26px; color: var(--neon-emerald);">✅</span>
                         <div>
-                            <div style="font-weight: 700; font-size: 14px;">قراءة NFC المباشرة (BAC)</div>
-                            <div style="font-size: 11px; color: var(--text-secondary);">إدخال المفاتيح واختبار الشريحة فوراً</div>
+                            <div style="font-weight: 900; font-size: 15px; color: var(--neon-emerald);">البطاقة أصلية
+                                ومطابقة (PASS)</div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">تطابقت بيانات الـ OCR مع الشريحة
+                                بنجاح</div>
                         </div>
                     </div>
-                </div>
 
-                <div style="background: rgba(39, 53, 73, 0.4); border-radius: 14px; padding: 14px; border: 1px solid var(--border-dark); font-size: 11px; color: var(--text-secondary); margin-top: auto;">
-                    🔒 Zero-Persistence: لا يتم تخزين أي صور أو بيانات شخصية محلياً في الهاتف.
-                </div>
-            </div>
-
-            <!-- VIEW 2: FRONT CAPTURE -->
-            <div class="app-view" id="view-2">
-                <div style="text-align: center; margin-bottom: 10px;">
-                    <div style="font-weight: 700; font-size: 15px;">تصوير الوجه الأمامي</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">ضع البطاقة داخل الإطار التوجيهي</div>
-                </div>
-
-                <div class="camera-container">
-                    <div class="hud-card-guide">
-                        <div class="hud-corner hud-tl"></div>
-                        <div class="hud-corner hud-tr"></div>
-                        <div class="hud-corner hud-bl"></div>
-                        <div class="hud-corner hud-br"></div>
-                        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.2); font-size: 40px;">
-                            🆔
+                    <div class="personal-card">
+                        <div class="face-avatar">
+                            👤
+                            <span style="font-size: 8px; color: var(--text-muted); margin-top: 4px;">DG2 Chip</span>
+                        </div>
+                        <div style="flex: 1; font-size: 12px;">
+                            <div style="font-weight: 900; font-size: 15px; margin-bottom: 2px;">أحمد علي محمد الموسوي
+                            </div>
+                            <div style="color: var(--neon-gold); font-weight: 700; margin-bottom: 8px;">AHMED ALI
+                                MOHAMMED</div>
+                            <div style="color: var(--text-secondary);">الرقم الوطني: <strong>199503201234</strong></div>
+                            <div style="color: var(--text-secondary);">الميلاد: <strong>1995-03-20</strong> | الجنس:
+                                <strong>ذكر</strong></div>
+                            <div style="color: var(--text-secondary);">النفاذ: <strong>2035-03-20</strong> |
+                                <strong>عراقي</strong></div>
                         </div>
                     </div>
-                </div>
 
-                <button class="primary-action-btn" onclick="switchStep(3)">
-                    <span>التقاط الوجه الأمامي ومتابعة</span>
-                </button>
-            </div>
-
-            <!-- VIEW 3: BACK MRZ OCR -->
-            <div class="app-view" id="view-3">
-                <div style="text-align: center; margin-bottom: 10px;">
-                    <div style="font-weight: 700; font-size: 15px; color: var(--neon-cyan);">مسح أسطر الـ MRZ (OCR)</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">جاري الكشف البصري وحساب الـ Check Digits</div>
-                </div>
-
-                <div class="camera-container">
-                    <div class="hud-card-guide">
-                        <div class="hud-corner hud-tl"></div>
-                        <div class="hud-corner hud-tr"></div>
-                        <div class="hud-corner hud-bl"></div>
-                        <div class="hud-corner hud-br"></div>
-                        <div class="laser-scan-line"></div>
+                    <div
+                        style="background: var(--surface-dark); border-radius: 12px; border: 1px solid var(--border-dark); padding: 12px; margin-bottom: 16px;">
+                        <div style="font-weight: 700; font-size: 12px; color: var(--neon-cyan); margin-bottom: 8px;">
+                            نتائج فحص الحقول:</div>
+                        <div class="table-check-row"><span>رقم الهوية:</span><span
+                                style="color: var(--neon-emerald);">AZ9431882 (مطابق ✔)</span></div>
+                        <div class="table-check-row"><span>تاريخ الميلاد:</span><span
+                                style="color: var(--neon-emerald);">950320 (مطابق ✔)</span></div>
+                        <div class="table-check-row"><span>الاسم المطبوع:</span><span
+                                style="color: var(--neon-emerald);">100% تطابق ✔</span></div>
                     </div>
-                    <div class="mrz-detected-box">
-                        IDIRQAZ9431882&lt;8199503201234&lt;&lt;<br>
-                        9503206M3503201IRQ&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;2<br>
-                        AL&lt;&lt;MOUSAWI&lt;&lt;AHMED&lt;ALI&lt;MOHAMME
-                    </div>
+
+                    <button class="primary-action-btn"
+                        onclick="alert('تم إرسال حزمة الـ JSON بنجاح إلى سيرفر الحاسوب عبر REST API!')">
+                        <span>إرسال البيانات للحاسوب (USB/API)</span>
+                    </button>
                 </div>
-
-                <button class="primary-action-btn" onclick="switchStep(4)">
-                    <span>تم التعرف على MRZ - انتقال لـ NFC</span>
-                </button>
-            </div>
-
-            <!-- VIEW 4: NFC SCAN -->
-            <div class="app-view" id="view-4">
-                <div style="text-align: center; margin-bottom: 10px;">
-                    <div style="font-weight: 700; font-size: 15px; color: var(--neon-emerald);">قراءة الشريحة الإلكترونية (NFC)</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">مفتاح BAC: AZ9431882 | 950320 | 350320</div>
-                </div>
-
-                <div class="nfc-scan-area">
-                    <div class="radar-circle">
-                        <div class="radar-wave"></div>
-                        📡
-                    </div>
-                    <div style="font-weight: 700; font-size: 16px; margin-bottom: 6px;">قرّب البطاقة من ظهر الهاتف...</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">جاري استخراج المجموعات البيومترية</div>
-
-                    <div class="dg-progress-list">
-                        <div class="dg-item"><span>DG1 (MRZ Data)</span><span style="color: var(--neon-emerald);">✔ مكتمل</span></div>
-                        <div class="dg-item"><span>DG2 (Biometric Photo)</span><span style="color: var(--neon-emerald);">✔ مكتمل (96KB)</span></div>
-                        <div class="dg-item"><span>DG11 (Full Details)</span><span style="color: var(--neon-emerald);">✔ مكتمل</span></div>
-                        <div class="dg-item"><span>SOD (Digital Signature)</span><span style="color: var(--neon-emerald);">✔ موثق</span></div>
-                    </div>
-                </div>
-
-                <button class="primary-action-btn" onclick="switchStep(5)">
-                    <span>عرض تقرير المطابقة الشامل</span>
-                </button>
-            </div>
-
-            <!-- VIEW 5: VERIFICATION REPORT -->
-            <div class="app-view" id="view-5">
-                <div style="text-align: center; margin-bottom: 12px;">
-                    <div style="font-weight: 900; font-size: 16px;">تقرير المطابقة والتحقق النهائي</div>
-                </div>
-
-                <div class="verdict-badge">
-                    <span style="font-size: 26px; color: var(--neon-emerald);">✅</span>
-                    <div>
-                        <div style="font-weight: 900; font-size: 15px; color: var(--neon-emerald);">البطاقة أصلية ومطابقة (PASS)</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">تطابقت بيانات الـ OCR مع الشريحة بنجاح</div>
-                    </div>
-                </div>
-
-                <div class="personal-card">
-                    <div class="face-avatar">
-                        👤
-                        <span style="font-size: 8px; color: var(--text-muted); margin-top: 4px;">DG2 Chip</span>
-                    </div>
-                    <div style="flex: 1; font-size: 12px;">
-                        <div style="font-weight: 900; font-size: 15px; margin-bottom: 2px;">أحمد علي محمد الموسوي</div>
-                        <div style="color: var(--neon-gold); font-weight: 700; margin-bottom: 8px;">AHMED ALI MOHAMMED</div>
-                        <div style="color: var(--text-secondary);">الرقم الوطني: <strong>199503201234</strong></div>
-                        <div style="color: var(--text-secondary);">الميلاد: <strong>1995-03-20</strong> | الجنس: <strong>ذكر</strong></div>
-                        <div style="color: var(--text-secondary);">النفاذ: <strong>2035-03-20</strong> | <strong>عراقي</strong></div>
-                    </div>
-                </div>
-
-                <div style="background: var(--surface-dark); border-radius: 12px; border: 1px solid var(--border-dark); padding: 12px; margin-bottom: 16px;">
-                    <div style="font-weight: 700; font-size: 12px; color: var(--neon-cyan); margin-bottom: 8px;">نتائج فحص الحقول:</div>
-                    <div class="table-check-row"><span>رقم الهوية:</span><span style="color: var(--neon-emerald);">AZ9431882 (مطابق ✔)</span></div>
-                    <div class="table-check-row"><span>تاريخ الميلاد:</span><span style="color: var(--neon-emerald);">950320 (مطابق ✔)</span></div>
-                    <div class="table-check-row"><span>الاسم المطبوع:</span><span style="color: var(--neon-emerald);">100% تطابق ✔</span></div>
-                </div>
-
-                <button class="primary-action-btn" onclick="alert('تم إرسال حزمة الـ JSON بنجاح إلى سيرفر الحاسوب عبر REST API!')">
-                    <span>إرسال البيانات للحاسوب (USB/API)</span>
-                </button>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-    function switchStep(stepNumber) {
-        // Update tabs
-        document.querySelectorAll('.step-btn').forEach((btn, index) => {
-            if (index + 1 === stepNumber) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
+    <script>
+        function switchStep(stepNumber) {
+            // Update tabs
+            document.querySelectorAll('.step-btn').forEach((btn, index) => {
+                if (index + 1 === stepNumber) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
 
-        // Update phone views
-        document.querySelectorAll('.app-view').forEach((view, index) => {
-            if (index + 1 === stepNumber) {
-                view.classList.add('active');
-            } else {
-                view.classList.remove('active');
-            }
-        });
-    }
-</script>
+            // Update phone views
+            document.querySelectorAll('.app-view').forEach((view, index) => {
+                if (index + 1 === stepNumber) {
+                    view.classList.add('active');
+                } else {
+                    view.classList.remove('active');
+                }
+            });
+        }
+    </script>
 </body>
+
 </html>

@@ -311,144 +311,136 @@ public struct MainView: View {
     }
     
     // MARK: - Full Screen Camera View with Futuristic HUD
+    // MARK: - Full Screen Camera View with High-Precision ID-1 HUD
     private var fullScreenCameraView: some View {
         ZStack {
             CameraPreviewView(session: viewModel.cameraManager.getCaptureSession())
                 .ignoresSafeArea()
             
             // Dark vignette overlay around target box
-            Color.black.opacity(0.4).ignoresSafeArea()
+            Color.black.opacity(0.68).ignoresSafeArea()
             
             VStack {
-                // Top Action Bar with Back Button & Holographic Active Radar Pill
+                // Top Action Bar with Share & Close buttons
                 HStack {
+                    Button(action: {}) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 42, height: 42)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                    }
+                    
+                    Spacer()
+                    
                     Button(action: {
                         withAnimation { viewModel.currentStep = .idle }
                     }) {
-                        Image(systemName: "chevron.backward.circle.fill")
-                            .font(.system(size: 36))
-                            .foregroundColor(.white.opacity(0.9))
-                            .background(Circle().fill(Color.black.opacity(0.5)))
-                    }
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.neonGold)
-                            .frame(width: 8, height: 8)
-                        Text(viewModel.cameraManager.isCardLocked ? "MRZ LOCKED ✓ AUTO-TRANSITION..." : "LIVE MRZ RADAR ACTIVE")
-                            .font(.system(size: 12, weight: .black, design: .monospaced))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
+                            .frame(width: 42, height: 42)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.8))
-                    .cornerRadius(20)
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.white.opacity(0.2), lineWidth: 1.5))
-                    
-                    Spacer()
-                    
-                    // Spacer balancing layout
-                    Color.clear.frame(width: 36, height: 36)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 24)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
                 
                 Spacer()
                 
-                // Holographic Card Bounding HUD with ReadID-Style MRZ Chevron Guidelines
-                ZStack {
-                    // Frame Background
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(viewModel.cameraManager.isCardLocked ? Color.neonEmerald.opacity(0.18) : Color.clear)
-                    
-                    // Thin Frame
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                    
-                    // Corner Brackets
-                    CornerBracketShape(cornerLength: 28, radius: 16)
-                        .stroke(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.neonCyan, lineWidth: 3.5)
-                    
-                    // 3-Row MRZ Chevron Position Guide
-                    VStack(spacing: 3) {
-                        Spacer()
-                        
-                        if viewModel.cameraManager.isCardLocked, let mrz = viewModel.mrzData {
-                            Text(mrz.rawMrzLines.indices.contains(0) ? mrz.rawMrzLines[0] : "^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
-                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                .foregroundColor(.neonEmerald)
-                                .lineLimit(1)
-                            Text(mrz.rawMrzLines.indices.contains(1) ? mrz.rawMrzLines[1] : "^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
-                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                .foregroundColor(.neonEmerald)
-                                .lineLimit(1)
-                            Text(mrz.rawMrzLines.indices.contains(2) ? mrz.rawMrzLines[2] : "^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
-                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                .foregroundColor(.neonEmerald)
-                                .lineLimit(1)
-                        } else {
-                            Text("^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.4))
-                                .lineLimit(1)
-                            Text("^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.4))
-                                .lineLimit(1)
-                            Text("^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^")
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.4))
-                                .lineLimit(1)
-                        }
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 14)
-                    
-                    // Document Scanned Center Badge
-                    if viewModel.cameraManager.isCardLocked {
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.white)
-                            Text("✓ Document scanned")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color.neonEmerald)
-                        .cornerRadius(20)
-                        .shadow(color: Color.neonEmerald.opacity(0.5), radius: 10, y: 3)
-                    } else {
-                        // Prompt in center when scanning
-                        Text(viewModel.cameraManager.autoCapturePrompt)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(Color.black.opacity(0.7))
-                            .cornerRadius(8)
-                    }
-                }
-                .frame(width: 320, height: 200)
-                
-                Spacer()
-                
-                // Floating Frosted Capture Button
-                Button(action: {
-                    viewModel.cameraManager.triggerManualCapture()
-                }) {
+                // Vertical ID-1 Frame with 3-column MRZ Chevron Guides & Side Pill
+                HStack(spacing: 12) {
                     ZStack {
-                        Circle()
-                            .stroke(Color.white.opacity(0.4), lineWidth: 4)
-                            .frame(width: 76, height: 76)
-                        Circle()
-                            .fill(LinearGradient(colors: [.white, Color(white: 0.9)], startPoint: .top, endPoint: .bottom))
-                            .frame(width: 62, height: 62)
+                        // Crisp White Rounded Rectangle Frame
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(viewModel.cameraManager.isCardLocked ? Color.neonEmerald : Color.white, lineWidth: 2.2)
+                            .background(RoundedRectangle(cornerRadius: 22).fill(viewModel.cameraManager.isCardLocked ? Color.neonEmerald.opacity(0.15) : Color.black.opacity(0.2)))
+                            .shadow(color: viewModel.cameraManager.isCardLocked ? Color.neonEmerald.opacity(0.5) : Color.clear, radius: 15)
+                        
+                        // 3 Columns of MRZ Guide Filler Characters (<) on the left
+                        HStack(spacing: 5) {
+                            ForEach(0..<3, id: \.self) { _ in
+                                VStack(spacing: 2) {
+                                    ForEach(0..<24, id: \.self) { _ in
+                                        Text("<")
+                                            .font(.system(size: 12.5, weight: .black, design: .monospaced))
+                                            .foregroundColor(.white.opacity(0.9))
+                                    }
+                                }
+                            }
+                            Spacer()
+                        }
+                        .padding(.leading, 14)
+                        .padding(.vertical, 20)
+                        
+                        // Small Diamond Marker at bottom center
+                        VStack {
+                            Spacer()
+                            Rectangle()
+                                .fill(Color.white.opacity(0.85))
+                                .frame(width: 6, height: 6)
+                                .rotationEffect(.degrees(45))
+                                .padding(.bottom, 12)
+                        }
+                    }
+                    .frame(width: 260, height: 412) // Standard vertical ID-1 ratio (53.98 : 85.60)
+                    
+                    // Vertical Side Instruction Pill
+                    Text("Align back of identity card here")
+                        .font(.system(size: 13.5, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 8)
+                        .background(Color(white: 0.08).opacity(0.92))
+                        .cornerRadius(30)
+                        .overlay(RoundedRectangle(cornerRadius: 30).stroke(Color.white.opacity(0.18), lineWidth: 1))
+                        .rotationEffect(.degrees(90))
+                        .fixedSize()
+                }
+                
+                Spacer()
+                
+                // Bottom Controls (Manual Input & Torch)
+                HStack(spacing: 60) {
+                    Button(action: { showBacDialog = true }) {
+                        VStack(spacing: 6) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(white: 0.14).opacity(0.85))
+                                    .frame(width: 50, height: 50)
+                                    .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                                Image(systemName: "keyboard")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(.white)
+                            }
+                            Text("Manual input")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    
+                    Button(action: { viewModel.cameraManager.toggleTorch() }) {
+                        VStack(spacing: 6) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(white: 0.14).opacity(0.85))
+                                    .frame(width: 50, height: 50)
+                                    .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                                Image(systemName: viewModel.cameraManager.isTorchOn ? "flashlight.on.fill" : "flashlight.off.fill")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(viewModel.cameraManager.isTorchOn ? .neonGold : .white)
+                            }
+                            Text("Torch")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
                     }
                 }
-                .padding(.bottom, 28)
+                .padding(.bottom, 32)
             }
         }
     }
