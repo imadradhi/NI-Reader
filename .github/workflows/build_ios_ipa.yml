@@ -43,6 +43,9 @@ jobs:
           
           # Restore Podfile with iOS 15.0 deployment target
           cp /tmp/CustomPodfile ios/Podfile
+          
+          # Inject CODE_SIGN_ENTITLEMENTS into Xcode project to enable CoreNFC capabilities
+          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.iraq.flutterNiReader;/PRODUCT_BUNDLE_IDENTIFIER = com.iraq.flutterNiReader;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = "Runner\/Runner.entitlements";/g' ios/Runner.xcodeproj/project.pbxproj || true
 
       - name: Install Dependencies
         working-directory: ./flutter_ni_reader

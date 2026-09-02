@@ -17,23 +17,24 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
     }
     
     public func startNfcRead(docNumber: String, dob: String, expiry: String, result: @escaping FlutterResult) {
-        guard NFCTagReaderSession.readingAvailable else {
-            result(FlutterError(code: "NFC_UNAVAILABLE", message: "NFC is not supported or disabled on this iPhone device.", details: nil))
-            return
-        }
-        
         self.targetDocNumber = docNumber.replacingOccurrences(of: "<", with: "").trimmingCharacters(in: .whitespaces)
         self.targetDob = dob.replacingOccurrences(of: "-", with: "").trimmingCharacters(in: .whitespaces)
         self.targetExpiry = expiry.replacingOccurrences(of: "-", with: "").trimmingCharacters(in: .whitespaces)
         self.completionResult = result
         
+        // Attempt starting CoreNFC ISO 14443 / 7816 Tag Reader Session
         self.session = NFCTagReaderSession(
             pollingOption: [.iso14443],
             delegate: self,
             queue: nil
         )
-        self.session?.alertMessage = "ضع أعلى ظهر هاتف الآيفون (بجانب الكاميرا) ملامساً لشريحة البطاقة..."
-        self.session?.begin()
+        
+        if let session = self.session {
+            session.alertMessage = "ضع أعلى ظهر هاتف الآيفون (بجانب الكاميرا) ملامساً لشريحة البطاقة..."
+            session.begin()
+        } else {
+            result(FlutterError(code: "NFC_UNAVAILABLE", message: "تعذر تشغيل قارئ NFC. تأكد من تفعيل الصلاحيات وتثبيت البطاقة على أعلى الجهاز.", details: nil))
+        }
     }
     
     // MARK: - NFCTagReaderSessionDelegate
