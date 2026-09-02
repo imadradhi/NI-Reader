@@ -1,4 +1,5 @@
-# Uncomment this line to define a global platform for your project
+source 'https://cdn.cocoapods.org/'
+
 platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
@@ -31,7 +32,7 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  pod 'NFCPassportReader', '~> 2.3.3'
+  pod 'NFCPassportReader', :git => 'https://github.com/AndyQ/NFCPassportReader.git'
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
