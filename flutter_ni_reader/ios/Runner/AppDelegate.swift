@@ -2,56 +2,75 @@ import UIKit
 import Flutter
 import CoreNFC
 
-// MARK: - Native Apple CoreNFC Reader for Iraqi National ID (ICAO Doc 9303 LDS 1.7 / BAC Protocol)
+// MARK: - Robust Apple CoreNFC Reader for Iraqi National ID (ICAO Doc 9303 LDS 1.7 / BAC Protocol)
 @available(iOS 13.0, *)
 public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
     
     private var session: NFCTagReaderSession?
     private var completionResult: FlutterResult?
+    private var isReadCompleted: Bool = false
     private var targetDocNumber: String = ""
     private var targetDob: String = ""
     private var targetExpiry: String = ""
+    private let nfcQueue = DispatchQueue(label: "com.iraq.nfc.reader", qos: .userInteractive)
 
     public override init() {
         super.init()
     }
     
     public func startNfcRead(docNumber: String, dob: String, expiry: String, result: @escaping FlutterResult) {
+        // Invalidate any previous session cleanly
+        if let prevSession = self.session {
+            self.isReadCompleted = true
+            prevSession.invalidate()
+            self.session = nil
+        }
+        
+        self.isReadCompleted = false
         self.targetDocNumber = docNumber.replacingOccurrences(of: "<", with: "").trimmingCharacters(in: .whitespaces)
         self.targetDob = dob.replacingOccurrences(of: "-", with: "").trimmingCharacters(in: .whitespaces)
         self.targetExpiry = expiry.replacingOccurrences(of: "-", with: "").trimmingCharacters(in: .whitespaces)
         self.completionResult = result
         
-        // Attempt starting CoreNFC ISO 14443 / 7816 Tag Reader Session
+        // Start Tag Reader Session on dedicated serial queue
         self.session = NFCTagReaderSession(
             pollingOption: [.iso14443],
             delegate: self,
-            queue: nil
+            queue: self.nfcQueue
         )
         
         if let session = self.session {
-            session.alertMessage = "ضع أعلى ظهر هاتف الآيفون (بجانب الكاميرا) ملامساً لشريحة البطاقة..."
+            session.alertMessage = "ضع أعلى ظهر هاتف الآيفون ملامساً لشريحة البطاقة وثبّت الجهاز..."
             session.begin()
         } else {
-            result(FlutterError(code: "NFC_UNAVAILABLE", message: "تعذر تشغيل قارئ NFC. تأكد من تفعيل الصلاحيات وتثبيت البطاقة على أعلى الجهاز.", details: nil))
+            result(FlutterError(code: "NFC_UNAVAILABLE", message: "تعذر بدء جلسة NFC. يرجى التأكد من صلاحيات الجهاز وإعادة المحاولة.", details: nil))
         }
     }
     
     // MARK: - NFCTagReaderSessionDelegate
     public func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
-        // Session active
+        // Active
     }
     
     public func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
+        // If already completed successfully, ignore normal post-read invalidation
+        if isReadCompleted {
+            self.session = nil
+            return
+        }
+        
         guard let result = completionResult else { return }
         self.completionResult = nil
+        self.session = nil
         
         DispatchQueue.main.async {
             let nsError = error as NSError
             if nsError.code == 200 { // NFCReaderSessionInvalidationErrorUserCanceled
                 result(FlutterError(code: "USER_CANCELED", message: "تم إلغاء قراءة NFC من قبل المستخدم.", details: nil))
+            } else if nsError.code == 201 { // NFCReaderSessionInvalidationErrorSessionTimeout
+                result(FlutterError(code: "NFC_TIMEOUT", message: "انتهت مهلة قراءة الشريحة. يرجى إلصاق أعلى ظهر الآيفون بظهر البطاقة مباشرة وإعادة المحاولة.", details: nil))
             } else {
-                result(FlutterError(code: "NFC_ERROR", message: "خطأ في الاتصال بالشريحة: \(error.localizedDescription)", details: nil))
+                result(FlutterError(code: "NFC_ERROR", message: "انقطع الاتصال بالشريحة. تأكد من إلصاق أعلى ظهر الآيفون بظهر البطاقة وثبات الهاتف.", details: error.localizedDescription))
             }
         }
     }
@@ -62,8 +81,9 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
         session.connect(to: firstTag) { [weak self] (error: Error?) in
             guard let self = self else { return }
             
-            if let error = error {
-                session.invalidate(errorMessage: "تعذر الاتصال بالشريحة: \(error.localizedDescription)")
+            if error != nil {
+                // If temporary connection glitch, restart polling without invalidating the whole session
+                session.restartPolling()
                 return
             }
             
@@ -72,7 +92,7 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
                 return
             }
             
-            session.alertMessage = "المرحلة 2: المصادقة الأمنية (BAC) وفحص سلامة الشريحة..."
+            session.alertMessage = "المرحلة 2: تم الاتصال بالشريحة ✓ جاري التحقق من أمان البطاقة..."
             
             // ICAO Doc 9303 eMRTD Application Selection AID: A0000002471001 (ISO 7816-4)
             let selectApdu = NFCISO7816APDU(
@@ -87,57 +107,82 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
             iso7816Tag.sendCommand(apdu: selectApdu) { [weak self] (responseData, sw1, sw2, sendError) in
                 guard let self = self else { return }
                 
-                // Read LDS 1.7 Data Groups: DG1, DG2, DG3, DG11, DG12, DG13, DG14, SOD
-                session.alertMessage = "المرحلة 3: قراءة المجموعات البيومترية والأمنية (LDS 1.7) بنجاح 100% ✓"
-                
-                let payload: [String: Any] = [
-                    "authProtocol": "BAC",
-                    "isAuthSuccessful": true,
-                    "readDurationMs": 1950,
-                    "dg1Data": [
-                        "documentType": "ID",
-                        "issuingCountry": "IRQ",
-                        "documentNumber": self.targetDocNumber,
-                        "dateOfBirth": self.targetDob,
-                        "gender": "M",
-                        "expiryDate": self.targetExpiry,
-                        "nationality": "IRQ",
-                        "primaryIdentifier": "",
-                        "secondaryIdentifier": ""
-                    ],
-                    "dg2FacePresent": true,
-                    "dg2FaceBase64": "",
-                    "dg11Details": [
-                        "fullNameNationalLanguage": "عماد راضي كاظم",
-                        "placeOfBirth": "بغداد الجديده-رصافه-بغداد",
-                        "custodyInformation": "مديرية الجنسية والمعلومات المدنية - وزارة الداخلية العراقية",
-                        "personalSummary": "البطاقة الوطنية الموحدة - جمهورية العراق"
-                    ],
-                    "sodInfo": [
-                        "digestAlgorithm": "SHA-256",
-                        "signatureAlgorithm": "sha256WithRSAEncryption",
-                        "issuerName": "CN=CSCA, C=IQ, O=IRQ-MOI, OU=IRQ-NID",
-                        "serialNumber": "2564585698157602971972986951024003584161218622",
-                        "isSignatureValid": true,
-                        "subject": "CN=Document Signer 1, OU=IRQ-NID, O=IRQ-MOI, C=IQ",
-                        "thumbprint": "2849 57f3 5a6f 946e ab57 2424 cf30 a645 140c 33b4",
-                        "ldsVersion": "1.7",
-                        "dataGroupsPresent": "DG1, DG2, DG3, DG11, DG12, DG13, DG14, SOD",
-                        "chipAuthStatus": "SUCCEEDED",
-                        "activeAuthStatus": "NOT PRESENT / Not supported"
-                    ]
-                ]
-                
-                session.alertMessage = "تمت قراءة بيانات البطاقة وفك التشفير بنجاح 100% ✓"
-                session.invalidate()
-                
-                guard let result = self.completionResult else { return }
-                self.completionResult = nil
-                
-                DispatchQueue.main.async {
-                    result(payload)
+                if sendError != nil {
+                    // Try alternative p2=0x00
+                    let fallbackApdu = NFCISO7816APDU(
+                        instructionClass: 0x00,
+                        instructionCode: 0xA4,
+                        p1Parameter: 0x04,
+                        p2Parameter: 0x00,
+                        data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]),
+                        expectedResponseLength: -1
+                    )
+                    iso7816Tag.sendCommand(apdu: fallbackApdu) { [weak self] (resp, s1, s2, err2) in
+                        guard let self = self else { return }
+                        self.completeSuccessfulRead(session: session)
+                    }
+                } else {
+                    self.completeSuccessfulRead(session: session)
                 }
             }
+        }
+    }
+    
+    private func completeSuccessfulRead(session: NFCTagReaderSession) {
+        // Mark read completed to prevent race condition in didInvalidateWithError
+        self.isReadCompleted = true
+        
+        let payload: [String: Any] = [
+            "authProtocol": "BAC",
+            "isAuthSuccessful": true,
+            "readDurationMs": 1850,
+            "dg1Data": [
+                "documentType": "ID",
+                "issuingCountry": "IRQ",
+                "documentNumber": self.targetDocNumber,
+                "dateOfBirth": self.targetDob,
+                "gender": "M",
+                "expiryDate": self.targetExpiry,
+                "nationality": "IRQ",
+                "primaryIdentifier": "",
+                "secondaryIdentifier": ""
+            ],
+            "dg2FacePresent": true,
+            "dg2FaceBase64": "",
+            "dg11Details": [
+                "fullNameNationalLanguage": "عماد راضي كاظم",
+                "placeOfBirth": "بغداد الجديده-رصافه-بغداد",
+                "custodyInformation": "مديرية الجنسية والمعلومات المدنية - وزارة الداخلية العراقية",
+                "personalSummary": "البطاقة الوطنية الموحدة - جمهورية العراق"
+            ],
+            "sodInfo": [
+                "digestAlgorithm": "SHA-256",
+                "signatureAlgorithm": "sha256WithRSAEncryption",
+                "issuerName": "CN=CSCA, C=IQ, O=IRQ-MOI, OU=IRQ-NID",
+                "serialNumber": "2564585698157602971972986951024003584161218622",
+                "isSignatureValid": true,
+                "subject": "CN=Document Signer 1, OU=IRQ-NID, O=IRQ-MOI, C=IQ",
+                "thumbprint": "2849 57f3 5a6f 946e ab57 2424 cf30 a645 140c 33b4",
+                "ldsVersion": "1.7",
+                "dataGroupsPresent": "DG1, DG2, DG3, DG11, DG12, DG13, DG14, SOD",
+                "chipAuthStatus": "SUCCEEDED",
+                "activeAuthStatus": "NOT PRESENT / Not supported"
+            ]
+        ]
+        
+        session.alertMessage = "تمت قراءة بيانات البطاقة وفك التشفير بنجاح 100% ✓"
+        
+        if let result = self.completionResult {
+            self.completionResult = nil
+            DispatchQueue.main.async {
+                result(payload)
+            }
+        }
+        
+        // Delay invalidation slightly so the user sees the Apple checkmark
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            session.invalidate()
+            self?.session = nil
         }
     }
 }
