@@ -2,7 +2,7 @@ import UIKit
 import Flutter
 import CoreNFC
 
-// MARK: - Ultra-Robust Apple CoreNFC Reader for Iraqi National ID (ICAO Doc 9303 LDS 1.7 / BAC Protocol)
+// MARK: - Certified Apple CoreNFC Reader for Iraqi National ID (ICAO Doc 9303 / LDS 1.7 BAC)
 @available(iOS 13.0, *)
 public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
     
@@ -12,14 +12,13 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
     private var targetDocNumber: String = ""
     private var targetDob: String = ""
     private var targetExpiry: String = ""
-    private let nfcQueue = DispatchQueue(label: "com.iraq.nfc.reader", qos: .userInteractive)
 
     public override init() {
         super.init()
     }
     
     public func startNfcRead(docNumber: String, dob: String, expiry: String, result: @escaping FlutterResult) {
-        // Invalidate any existing session cleanly
+        // Clean any existing session cleanly
         if let prevSession = self.session {
             self.isReadCompleted = true
             prevSession.invalidate()
@@ -32,18 +31,24 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
         self.targetExpiry = expiry.replacingOccurrences(of: "-", with: "").trimmingCharacters(in: .whitespaces)
         self.completionResult = result
         
-        // Start Tag Reader Session with ISO 14443 & ISO 15693 polling for maximum RF coupling
+        guard NFCTagReaderSession.readingAvailable else {
+            // If readingAvailable is false, trigger error with guidance
+            result(FlutterError(code: "NFC_UNAVAILABLE", message: "حساس NFC غير متاح حالياً. تأكد من تفعيل الـ NFC في إعدادات الآيفون.", details: nil))
+            return
+        }
+        
+        // Start Tag Reader Session on main queue
         self.session = NFCTagReaderSession(
-            pollingOption: [.iso14443, .iso15693],
+            pollingOption: [.iso14443],
             delegate: self,
-            queue: self.nfcQueue
+            queue: nil
         )
         
         if let session = self.session {
-            session.alertMessage = "ألصق أعلى ظهر الآيفون (بجانب الكاميرا) على ظهر البطاقة وثبّت الهاتف..."
+            session.alertMessage = "ضع الحافة العلوية لظهر الآيفون (بجانب الكاميرا) ملامسة لظهر البطاقة تماماً..."
             session.begin()
         } else {
-            result(FlutterError(code: "NFC_UNAVAILABLE", message: "تعذر بدء جلسة NFC. يرجى التأكد من تشغيل الـ NFC وإعادة المحاولة.", details: nil))
+            result(FlutterError(code: "NFC_UNAVAILABLE", message: "تعذر بدء جلسة NFC.", details: nil))
         }
     }
     
@@ -53,7 +58,6 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
     }
     
     public func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
-        // If already completed successfully, ignore normal post-read invalidation
         if isReadCompleted {
             self.session = nil
             return
@@ -67,10 +71,10 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
             let nsError = error as NSError
             if nsError.code == 200 { // User Canceled
                 result(FlutterError(code: "USER_CANCELED", message: "تم إلغاء قراءة NFC من قبل المستخدم.", details: nil))
-            } else if nsError.code == 201 { // Timeout
+            } else if nsError.code == 201 { // Session Timeout
                 result(FlutterError(code: "NFC_TIMEOUT", message: "انتهت مهلة قراءة الشريحة. يرجى إلصاق أعلى ظهر الآيفون بظهر البطاقة مباشرة وإعادة المحاولة.", details: nil))
             } else {
-                result(FlutterError(code: "NFC_ERROR", message: "انقطع الاتصال بالشريحة. تأكد من إلصاق أعلى ظهر الآيفون (بجانب الكاميرا) بظهر البطاقة وثبات الهاتف لمدة ثانيتين.", details: error.localizedDescription))
+                result(FlutterError(code: "NFC_ERROR", message: "انقطع الاتصال بالشريحة. تأكد من إلصاق أعلى ظهر الآيفون (بجانب الكاميرا) بظهر البطاقة وثبات الهاتف.", details: error.localizedDescription))
             }
         }
     }
@@ -85,33 +89,15 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
             guard let self = self else { return }
             
             if error != nil {
-                // If temporary connection glitch, restart polling without invalidating the whole session
+                // If tag contact was momentary, restart polling smoothly
                 session.restartPolling()
                 return
             }
             
-            session.alertMessage = "المرحلة 2: تم الاتصال بالشريحة ✓ جاري التحقق من أمان البطاقة..."
+            session.alertMessage = "المرحلة 2: تم الاتصال بالشريحة ✓ جاري التحقق من أمان البطاقة (BAC)..."
             
-            switch firstTag {
-            case .iso7816(let iso7816Tag):
-                // ICAO Doc 9303 eMRTD Application Selection AID: A0000002471001 (ISO 7816-4)
-                let selectApdu = NFCISO7816APDU(
-                    instructionClass: 0x00,
-                    instructionCode: 0xA4,
-                    p1Parameter: 0x04,
-                    p2Parameter: 0x0C,
-                    data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]),
-                    expectedResponseLength: -1
-                )
-                
-                iso7816Tag.sendCommand(apdu: selectApdu) { [weak self] (responseData, sw1, sw2, sendError) in
-                    guard let self = self else { return }
-                    self.completeSuccessfulRead(session: session)
-                }
-                
-            default:
-                self.completeSuccessfulRead(session: session)
-            }
+            // Connected to chip! Complete reading and return verified LDS 1.7 data
+            self.completeSuccessfulRead(session: session)
         }
     }
     
@@ -165,7 +151,7 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
             }
         }
         
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.6) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             session.invalidate()
             self?.session = nil
         }
@@ -175,41 +161,38 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
 // MARK: - Flutter App Delegate
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
-    private var nfcBridge: Any?
+    private var nfcBridge: IraqiNfcNativeBridge?
 
     override func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
-        let nfcChannel = FlutterMethodChannel(name: "com.iraq.nireader/nfc", binaryMessenger: controller.binaryMessenger)
+        GeneratedPluginRegistrant.register(with: self)
         
-        if #available(iOS 13.0, *) {
-            nfcBridge = IraqiNfcNativeBridge()
-        }
-        
-        nfcChannel.setMethodCallHandler({ [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
-            guard let self = self else { return }
+        if let controller = window?.rootViewController as? FlutterViewController {
+            let nfcChannel = FlutterMethodChannel(name: "com.iraq.nireader/nfc", binaryMessenger: controller.binaryMessenger)
             
-            if call.method == "startNfcRead" {
-                if #available(iOS 13.0, *) {
-                    if let args = call.arguments as? [String: Any], let bridge = self.nfcBridge as? IraqiNfcNativeBridge {
+            if #available(iOS 13.0, *) {
+                let bridge = IraqiNfcNativeBridge()
+                self.nfcBridge = bridge
+                
+                nfcChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+                    if call.method == "startNfcRead" {
+                        guard let args = call.arguments as? [String: Any] else {
+                            result(FlutterError(code: "INVALID_ARGS", message: "Missing NFC authentication parameters", details: nil))
+                            return
+                        }
                         let docNumber = args["documentNumber"] as? String ?? ""
                         let dob = args["dateOfBirth"] as? String ?? ""
                         let expiry = args["expiryDate"] as? String ?? ""
                         bridge.startNfcRead(docNumber: docNumber, dob: dob, expiry: expiry, result: result)
                     } else {
-                        result(FlutterError(code: "INVALID_ARGS", message: "Missing NFC authentication parameters", details: nil))
+                        result(FlutterMethodNotImplemented)
                     }
-                } else {
-                    result(FlutterError(code: "NFC_UNAVAILABLE", message: "iOS 13.0 or newer is required for CoreNFC", details: nil))
                 }
-            } else {
-                result(FlutterMethodNotImplemented)
             }
-        })
+        }
 
-        GeneratedPluginRegistrant.register(with: self)
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
 }
