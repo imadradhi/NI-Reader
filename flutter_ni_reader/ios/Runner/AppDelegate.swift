@@ -74,17 +74,14 @@ public final class IraqiNfcNativeBridge: NSObject, NFCTagReaderSessionDelegate {
             session.alertMessage = "المرحلة 2: تم الاتصال بالشريحة ✓ جاري التحقق من أمان البطاقة..."
             
             // ICAO Doc 9303 eMRTD Application Selection AID: A0000002471001
-            guard let selectApdu = NFCISO7816APDU(
+            let selectApdu = NFCISO7816APDU(
                 instructionClass: 0x00,
                 instructionCode: 0xA4,
                 p1Parameter: 0x04,
                 p2Parameter: 0x0C,
                 data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]),
                 expectedResponseLength: -1
-            ) else {
-                session.invalidate(errorMessage: "خطأ في تكوين أمر APDU للشريحة.")
-                return
-            }
+            )
             
             iso7816Tag.sendCommand(apdu: selectApdu) { [weak self] (responseData, sw1, sw2, sendError) in
                 guard let self = self else { return }
