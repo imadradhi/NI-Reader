@@ -8,6 +8,8 @@ class HudOverlay extends StatelessWidget {
   final bool isBackScanning;
   final bool isAutoCapturing;
   final bool isTorchOn;
+  final int countdownSeconds; // 3, 2, 1, 0
+  final double stabilityProgress; // 0.0 to 1.0
   final VoidCallback? onToggleTorch;
   final VoidCallback? onManualInput;
   final VoidCallback? onClose;
@@ -20,6 +22,8 @@ class HudOverlay extends StatelessWidget {
     this.isBackScanning = true,
     this.isAutoCapturing = false,
     this.isTorchOn = false,
+    this.countdownSeconds = 0,
+    this.stabilityProgress = 0.0,
     this.onToggleTorch,
     this.onManualInput,
     this.onClose,
@@ -43,6 +47,8 @@ class HudOverlay extends StatelessWidget {
       cardWidth = math.min(size.width * 0.68, 280.0);
       cardHeight = cardWidth * (85.60 / 53.98);
     }
+
+    final bool isCountingDown = countdownSeconds > 0;
 
     return Stack(
       children: [
@@ -75,26 +81,26 @@ class HudOverlay extends StatelessWidget {
           ),
         ),
 
-        // 2. Crisp White Rounded Rectangle Border Frame & Internal Guides
+        // 2. Crisp White/Green Rounded Rectangle Border Frame & Internal Guides
         Center(
           child: SizedBox(
             width: cardWidth,
             height: cardHeight,
             child: Stack(
               children: [
-                // Solid White Border
+                // Solid Border (Turns vibrant emerald green when locked & counting down)
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(
-                      color: isAutoCapturing ? const Color(0xFF10B981) : Colors.white,
-                      width: 2.2,
+                      color: isCountingDown ? const Color(0xFF10B981) : Colors.white,
+                      width: isCountingDown ? 3.0 : 2.2,
                     ),
-                    boxShadow: isAutoCapturing
+                    boxShadow: isCountingDown
                         ? [
                             BoxShadow(
                               color: const Color(0xFF10B981).withOpacity(0.6),
-                              blurRadius: 18,
+                              blurRadius: 20,
                               spreadRadius: 2,
                             ),
                           ]
@@ -102,7 +108,7 @@ class HudOverlay extends StatelessWidget {
                   ),
                 ),
 
-                // 3-Row MRZ Chevron Position Guide (Left side of card in portrait)
+                // 3-Row MRZ Guide Lines with `>` Symbol (Left side of card in portrait)
                 if (isBackScanning)
                   Positioned(
                     left: 14,
@@ -132,7 +138,7 @@ class HudOverlay extends StatelessWidget {
                         width: 6,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
+                          color: isCountingDown ? const Color(0xFF10B981) : Colors.white.withOpacity(0.85),
                           borderRadius: BorderRadius.circular(1),
                         ),
                       ),
@@ -140,8 +146,64 @@ class HudOverlay extends StatelessWidget {
                   ),
                 ),
 
+                // 3-Second Stability Circular Countdown Badge in Center
+                if (isCountingDown)
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withOpacity(0.4),
+                            blurRadius: 16,
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: CircularProgressIndicator(
+                                  value: stabilityProgress,
+                                  strokeWidth: 4,
+                                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                                  backgroundColor: Colors.white24,
+                                ),
+                              ),
+                              Text(
+                                "$countdownSeconds",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "ثبّت البطاقة...",
+                            style: TextStyle(
+                              color: Color(0xFF10B981),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 // Subtle vertical scanning laser bar during auto-detection
-                if (isAutoCapturing) const _LiveScanBar(),
+                if (isAutoCapturing && !isCountingDown) const _LiveScanBar(),
               ],
             ),
           ),
@@ -159,10 +221,10 @@ class HudOverlay extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xE6141414),
+                    color: isCountingDown ? const Color(0xE60F2A1D) : const Color(0xE6141414),
                     borderRadius: BorderRadius.circular(100),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.18),
+                      color: isCountingDown ? const Color(0xFF10B981) : Colors.white.withOpacity(0.18),
                       width: 1,
                     ),
                     boxShadow: [
@@ -177,8 +239,8 @@ class HudOverlay extends StatelessWidget {
                     isBackScanning
                         ? "Align back of identity card here"
                         : "Align front of identity card here",
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isCountingDown ? const Color(0xFF10B981) : Colors.white,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.4,
@@ -244,14 +306,14 @@ class HudOverlay extends StatelessWidget {
     );
   }
 
-  /// Builds a single vertical column of caret / chevron symbols `<`
+  /// Builds a single vertical column of chevron guide symbols `>`
   Widget _buildChevronColumn() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(
         26,
         (index) => const Text(
-          "<",
+          ">",
           style: TextStyle(
             color: Colors.white,
             fontSize: 13.5,

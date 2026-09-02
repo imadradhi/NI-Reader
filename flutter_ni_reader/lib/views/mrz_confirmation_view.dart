@@ -157,7 +157,7 @@ class MrzConfirmationView extends StatelessWidget {
 
               const Spacer(),
 
-              // Primary Action: Proceed to NFC Button
+              // Primary Action: Use this Image and Proceed
               ElevatedButton.icon(
                 onPressed: () {
                   final provider = context.read<AppStateProvider>();
@@ -168,9 +168,9 @@ class MrzConfirmationView extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => const NfcScanView()),
                   );
                 },
-                icon: const Icon(Icons.nfc_rounded, size: 24),
+                icon: const Icon(Icons.check_circle_outline_rounded, size: 24),
                 label: const Text(
-                  "الاستمرار في قراءة الشريحة (NFC) ←",
+                  "استعمال هذه الصورة ومتابعة (NFC) ✓",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -186,7 +186,7 @@ class MrzConfirmationView extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // Re-scan Button
+              // Re-scan Button: Retake / Rescan
               OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pushReplacement(
@@ -196,12 +196,12 @@ class MrzConfirmationView extends StatelessWidget {
                 },
                 icon: const Icon(Icons.refresh, color: AppColors.textSecondary),
                 label: const Text(
-                  "إعادة مسح الكاميرا",
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  "مسح مرة أخرى (إلغاء وإعادة التصوير)",
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 44),
-                  side: const BorderSide(color: AppColors.borderDark),
+                  minimumSize: const Size(double.infinity, 46),
+                  side: const BorderSide(color: AppColors.borderDark, width: 1.2),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),

@@ -34,7 +34,12 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
   bool _isTorchOn = false;
   late bool _isFrontCapture;
   Timer? _autoCaptureTimer;
-  int _consecutiveValidDetections = 0;
+  
+  // 3-Second Stability Tracking
+  DateTime? _stableDetectionStartTime;
+  int _countdownSeconds = 0;
+  double _stabilityProgress = 0.0;
+  MrzData? _latestValidMrz;
 
   final TextRecognizer _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
   final ImagePicker _imagePicker = ImagePicker();
@@ -70,6 +75,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
     }
   }
 
+  /// Initializes Camera in standard default orientation
   Future<void> _initializeHardwareCamera() async {
     try {
       try {
@@ -106,7 +112,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         _isCameraInitialized = true;
       });
 
-      // Start continuous auto-detection loop for instant auto-capture
+      // Start continuous auto-detection loop with 3-second stability verification
       _startAutoCaptureLoop();
     } catch (e) {
       if (mounted) {
@@ -120,7 +126,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
   /// Starts the auto-detection loop that continuously inspects frames for TD1 MRZ
   void _startAutoCaptureLoop() {
     _autoCaptureTimer?.cancel();
-    _autoCaptureTimer = Timer.periodic(const Duration(milliseconds: 650), (timer) async {
+    _autoCaptureTimer = Timer.periodic(const Duration(milliseconds: 350), (timer) async {
       if (!mounted || _isProcessing || _cameraController == null || !_cameraController!.value.isInitialized) {
         return;
       }
@@ -151,10 +157,35 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
 
       final parsedMrz = MrzParser.parseTd1(rawLines);
 
-      if (parsedMrz != null && (parsedMrz.isDocumentNumberValid || parsedMrz.isDateOfBirthValid || parsedMrz.documentNumber.isNotEmpty)) {
-        _consecutiveValidDetections++;
-        if (_consecutiveValidDetections >= 1) {
-          // Success! Auto capture triggered!
+      // Strict high-accuracy MRZ back detection
+      final bool isValidBackDetection = parsedMrz != null &&
+          parsedMrz.documentNumber.length >= 6 &&
+          (parsedMrz.isDocumentNumberValid || parsedMrz.isDateOfBirthValid || parsedMrz.isExpiryDateValid);
+
+      if (isValidBackDetection) {
+        _latestValidMrz = parsedMrz;
+        final now = DateTime.now();
+
+        if (_stableDetectionStartTime == null) {
+          _stableDetectionStartTime = now;
+          HapticFeedback.lightImpact();
+        }
+
+        final elapsedMs = now.difference(_stableDetectionStartTime!).inMilliseconds;
+        const requiredMs = 3000; // Minimum 3 full seconds of stable hold
+        final remainingMs = (requiredMs - elapsedMs).clamp(0, requiredMs);
+        final countdown = (remainingMs / 1000).ceil();
+        final progress = (elapsedMs / requiredMs).clamp(0.0, 1.0);
+
+        if (mounted) {
+          setState(() {
+            _countdownSeconds = countdown > 0 ? countdown : 1;
+            _stabilityProgress = progress;
+          });
+        }
+
+        // 3 full seconds elapsed with stable detection!
+        if (elapsedMs >= requiredMs) {
           _autoCaptureTimer?.cancel();
           HapticFeedback.heavyImpact();
 
@@ -162,11 +193,12 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
           final base64Image = base64Encode(bytes);
 
           if (mounted) {
+            // Navigate to Review / Confirmation screen to Use Image or Rescan
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (_) => MrzConfirmationView(
-                  mrzData: parsedMrz,
+                  mrzData: _latestValidMrz!,
                   cardImageBase64: base64Image,
                 ),
               ),
@@ -175,7 +207,17 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
           return;
         }
       } else {
-        _consecutiveValidDetections = 0;
+        // Lost stability or card moved away: reset 3-second timer
+        _stableDetectionStartTime = null;
+        if (_countdownSeconds != 0) {
+          if (mounted) {
+            setState(() {
+              _countdownSeconds = 0;
+              _stabilityProgress = 0.0;
+            });
+          }
+        }
+
         // Clean temporary frame file
         try {
           if (await imageFile.exists()) await imageFile.delete();
@@ -197,9 +239,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         _isTorchOn = !_isTorchOn;
         await _cameraController!.setFlashMode(_isTorchOn ? FlashMode.torch : FlashMode.off);
         if (mounted) setState(() {});
-      } catch (e) {
-        // Torch not supported on some devices
-      }
+      } catch (_) {}
     }
   }
 
@@ -272,6 +312,8 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         setState(() {
           _isFrontCapture = false;
           _isProcessing = false;
+          _stableDetectionStartTime = null;
+          _countdownSeconds = 0;
         });
 
         _startAutoCaptureLoop();
@@ -332,7 +374,7 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
                 textAlign: TextAlign.center,
               ),
               content: const Text(
-                "لم يتم التعرف على أسطر الـ MRZ بوضوح.\n\nيرجى محاذاة أسطر الـ MRZ الثلاثة داخل الإطار الأبيض بإضاءة جيدة أو استخدام الإدخال اليدوي.",
+                "لم يتم التعرف على أسطر الـ MRZ بوضوح.\n\nيرجى محاذاة أسطر الـ MRZ الثلاثة داخل الإطار الأبيض وتثبيت الهاتف لـ 3 ثوانٍ بإضاءة جيدة أو استخدام الإدخال اليدوي.",
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.5),
                 textAlign: TextAlign.center,
               ),
@@ -370,13 +412,13 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
         : "Align back of identity card here";
     final hint = _isFrontCapture
         ? "ضع الوجه الأمامي داخل الإطار الأبيض"
-        : "قم بمحاذاة أسطر الـ MRZ الثلاثة داخل الإطار الأبيض";
+        : "قم بمحاذاة أسطر الـ MRZ الثلاثة داخل الإطار وثبّت الهاتف لـ 3 ثوانٍ";
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. Live Camera Preview
+          // 1. Live Camera Preview (Standard Default Aspect Ratio)
           if (_isCameraInitialized && _cameraController != null)
             Positioned.fill(
               child: AspectRatio(
@@ -420,13 +462,15 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
               ),
             ),
 
-          // 2. High-Precision HUD Overlay Matching Reference UI
+          // 2. High-Precision HUD Overlay with 3s Countdown & Stability Meter
           HudOverlay(
             title: title,
             hint: hint,
             isBackScanning: !_isFrontCapture,
             isAutoCapturing: _isAutoCapturing,
             isTorchOn: _isTorchOn,
+            countdownSeconds: _countdownSeconds,
+            stabilityProgress: _stabilityProgress,
             onToggleTorch: _toggleTorch,
             onManualInput: () {
               showDialog(
@@ -438,14 +482,14 @@ class _CameraOcrViewState extends State<CameraOcrView> with WidgetsBindingObserv
             onShare: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text("قارئ البطاقة الوطنية العراقية - مسح MRZ التلقائي نشط"),
+                  content: Text("قارئ البطاقة الوطنية العراقية - مسح MRZ الذكي التلقائي نشط"),
                   duration: Duration(seconds: 2),
                 ),
               );
             },
           ),
 
-          // Optional Manual Tap to Capture (if user wants to capture immediately for front side)
+          // Optional Manual Tap to Capture for Front Side
           if (_isFrontCapture)
             Positioned(
               bottom: 110,

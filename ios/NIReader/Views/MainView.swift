@@ -361,12 +361,12 @@ public struct MainView: View {
                             .background(RoundedRectangle(cornerRadius: 22).fill(viewModel.cameraManager.isCardLocked ? Color.neonEmerald.opacity(0.15) : Color.black.opacity(0.2)))
                             .shadow(color: viewModel.cameraManager.isCardLocked ? Color.neonEmerald.opacity(0.5) : Color.clear, radius: 15)
                         
-                        // 3 Columns of MRZ Guide Filler Characters (<) on the left
+                        // 3 Columns of MRZ Guide Symbols (>) on the left
                         HStack(spacing: 5) {
                             ForEach(0..<3, id: \.self) { _ in
                                 VStack(spacing: 2) {
                                     ForEach(0..<24, id: \.self) { _ in
-                                        Text("<")
+                                        Text(">")
                                             .font(.system(size: 12.5, weight: .black, design: .monospaced))
                                             .foregroundColor(.white.opacity(0.9))
                                     }

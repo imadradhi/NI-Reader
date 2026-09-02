@@ -643,21 +643,30 @@
 
                 <!-- VIEW 2: FRONT CAPTURE -->
                 <div class="app-view" id="view-2">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <div style="font-weight: 700; font-size: 15px;">تصوير الوجه الأمامي</div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">ضع البطاقة داخل الإطار التوجيهي
-                        </div>
-                    </div>
-
                     <div class="camera-container">
-                        <div class="hud-card-guide">
-                            <div class="hud-corner hud-tl"></div>
-                            <div class="hud-corner hud-tr"></div>
-                            <div class="hud-corner hud-bl"></div>
-                            <div class="hud-corner hud-br"></div>
-                            <div
-                                style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.2); font-size: 40px;">
-                                🆔
+                        <div class="hud-top-bar">
+                            <div class="hud-circle-btn">📤</div>
+                            <div class="hud-circle-btn" onclick="switchStep(1)">✕</div>
+                        </div>
+
+                        <div class="hud-card-wrapper">
+                            <div class="hud-card-guide">
+                                <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.25); font-size: 36px;">
+                                    🪪
+                                </div>
+                                <div class="hud-diamond-marker"></div>
+                            </div>
+                            <div class="hud-side-badge">Align front of identity card here</div>
+                        </div>
+
+                        <div class="hud-bottom-controls">
+                            <div class="hud-action-item" onclick="alert('فتح نافذة الإدخال اليدوي')">
+                                <div class="hud-action-icon-circle">⌨️</div>
+                                <div class="hud-action-label">Manual input</div>
+                            </div>
+                            <div class="hud-action-item" onclick="this.querySelector('.hud-action-icon-circle').style.color = (this.querySelector('.hud-action-icon-circle').style.color === 'rgb(255, 215, 0)' ? '#fff' : '#ffd700')">
+                                <div class="hud-action-icon-circle">🔦</div>
+                                <div class="hud-action-label">Torch</div>
                             </div>
                         </div>
                     </div>
@@ -667,32 +676,60 @@
                     </button>
                 </div>
 
-                <!-- VIEW 3: BACK MRZ OCR -->
+                <!-- VIEW 3: BACK MRZ OCR (Auto-Capture with 3s Countdown) -->
                 <div class="app-view" id="view-3">
-                    <div style="text-align: center; margin-bottom: 10px;">
-                        <div style="font-weight: 700; font-size: 15px; color: var(--neon-cyan);">مسح أسطر الـ MRZ (OCR)
-                        </div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">جاري الكشف البصري وحساب الـ Check
-                            Digits</div>
-                    </div>
-
                     <div class="camera-container">
-                        <div class="hud-card-guide">
-                            <div class="hud-corner hud-tl"></div>
-                            <div class="hud-corner hud-tr"></div>
-                            <div class="hud-corner hud-bl"></div>
-                            <div class="hud-corner hud-br"></div>
-                            <div class="laser-scan-line"></div>
+                        <div class="hud-top-bar">
+                            <div class="hud-circle-btn">📤</div>
+                            <div class="hud-circle-btn" onclick="switchStep(2)">✕</div>
                         </div>
+
+                        <div class="hud-card-wrapper">
+                            <div class="hud-card-guide" style="border-color: #10B981; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.72), 0 0 18px rgba(16, 185, 129, 0.5);">
+                                <!-- 3 Columns of MRZ Guide Symbols (>) -->
+                                <div class="hud-mrz-chevrons">
+                                    <div>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;</div>
+                                    <div>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;</div>
+                                    <div>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;<br>&gt;</div>
+                                </div>
+                                <div class="laser-scan-line"></div>
+                                <div class="hud-diamond-marker"></div>
+
+                                <!-- 3-Second Stability Indicator -->
+                                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); border-radius: 18px;">
+                                    <div style="font-size: 24px; font-weight: 900; color: #10B981; border: 2.5px solid #10B981; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;">
+                                        3s
+                                    </div>
+                                    <span style="font-size: 11px; font-weight: 700; color: #fff;">ثبّت البطاقة...</span>
+                                </div>
+                            </div>
+                            <div class="hud-side-badge">Align back of identity card here</div>
+                        </div>
+
                         <div class="mrz-detected-box">
+                            <span style="color: #10B981; font-weight: 700;">⚡ تم الكشف التلقائي (Auto-Capture بعد 3 ثوانٍ):</span><br>
                             IDIRQAZ9431882&lt;8199503201234&lt;&lt;<br>
                             9503206M3503201IRQ&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;2<br>
                             AL&lt;&lt;MOUSAWI&lt;&lt;AHMED&lt;ALI&lt;MOHAMME
                         </div>
+
+                        <div class="hud-bottom-controls">
+                            <div class="hud-action-item" onclick="alert('فتح نافذة الإدخال اليدوي (Manual BAC)')">
+                                <div class="hud-action-icon-circle">⌨️</div>
+                                <div class="hud-action-label">Manual input</div>
+                            </div>
+                            <div class="hud-action-item" onclick="this.querySelector('.hud-action-icon-circle').style.color = (this.querySelector('.hud-action-icon-circle').style.color === 'rgb(255, 215, 0)' ? '#fff' : '#ffd700')">
+                                <div class="hud-action-icon-circle">🔦</div>
+                                <div class="hud-action-label">Torch</div>
+                            </div>
+                        </div>
                     </div>
 
                     <button class="primary-action-btn" onclick="switchStep(4)">
-                        <span>تم التعرف على MRZ - انتقال لـ NFC</span>
+                        <span>استعمال هذه الصورة ومتابعة (NFC) ✓</span>
+                    </button>
+                    <button style="background: transparent; border: 1px solid var(--border-dark); color: var(--text-secondary); width: 100%; padding: 10px; border-radius: 12px; margin-top: 8px; font-size: 13px; font-weight: 700; cursor: pointer;" onclick="switchStep(2)">
+                        <span>مسح مرة أخرى (إعادة التصوير)</span>
                     </button>
                 </div>
 
