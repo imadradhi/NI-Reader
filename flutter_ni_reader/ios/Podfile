@@ -32,7 +32,6 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  pod 'NFCPassportReader', :git => 'https://github.com/AndyQ/NFCPassportReader.git', :tag => '2.2.0'
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
