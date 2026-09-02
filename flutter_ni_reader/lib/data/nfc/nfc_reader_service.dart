@@ -57,7 +57,8 @@ class NfcReaderService {
         yield NfcError("تم إلغاء عملية المسح من قبل المستخدم.");
         return;
       }
-      yield NfcError(pe.message ?? "تعذر إكمال قراءة الشريحة. تأكد من تثبيت البطاقة على أعلى الهاتف.");
+      // Attempt fallback directly to FlutterNfcKit
+      yield* _readViaFlutterNfcKit(authKey);
       return;
     } catch (e) {
       // If MethodChannel is unavailable on dev test, attempt direct FlutterNfcKit
