@@ -1,0 +1,82 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Initialize Android Project Structure
+        working-directory: ./flutter_ni_reader
+        run: |
+          # Backup custom files
+          cp android/app/src/main/AndroidManifest.xml /tmp/CustomAndroidManifest.xml || true
+          cp android/app/src/main/res/xml/nfc_tech_filter.xml /tmp/CustomNfcTechFilter.xml || true
+          cp android/app/build.gradle /tmp/CustomAppBuildGradle.gradle || true
+          cp android/build.gradle /tmp/CustomRootBuildGradle.gradle || true
+          cp android/settings.gradle /tmp/CustomSettings.gradle || true
+          cp android/gradle.properties /tmp/CustomGradleProps.properties || true
+          cp android/app/src/main/kotlin/com/iraq/flutter_ni_reader/MainActivity.kt /tmp/CustomMainActivity.kt || true
+          cp android/app/src/main/res/values/styles.xml /tmp/CustomStyles.xml || true
+
+          # Generate fresh Android project structure
+          flutter create . --platforms=android --org com.iraq
+
+          # Restore custom AndroidManifest.xml (NFC + Camera permissions)
+          cp /tmp/CustomAndroidManifest.xml android/app/src/main/AndroidManifest.xml
+
+          # Restore NFC tech filter
+          mkdir -p android/app/src/main/res/xml
+          cp /tmp/CustomNfcTechFilter.xml android/app/src/main/res/xml/nfc_tech_filter.xml
+
+          # Restore custom build.gradle files
+          cp /tmp/CustomAppBuildGradle.gradle android/app/build.gradle
+          cp /tmp/CustomRootBuildGradle.gradle android/build.gradle
+          cp /tmp/CustomSettings.gradle android/settings.gradle
+          cp /tmp/CustomGradleProps.properties android/gradle.properties
+
+          # Restore MainActivity.kt
+          mkdir -p android/app/src/main/kotlin/com/iraq/flutter_ni_reader
+          cp /tmp/CustomMainActivity.kt android/app/src/main/kotlin/com/iraq/flutter_ni_reader/MainActivity.kt
+
+          # Restore styles
+          mkdir -p android/app/src/main/res/values
+          cp /tmp/CustomStyles.xml android/app/src/main/res/values/styles.xml
+
+      - name: Install Flutter Dependencies
+        working-directory: ./flutter_ni_reader
+        run: flutter pub get
+
+      - name: Build Android APK (Release - Debug Signed)
+        working-directory: ./flutter_ni_reader
+        run: |
+          flutter build apk --release --no-tree-shake-icons
+          mv build/app/outputs/flutter-apk/app-release.apk ../Iraqi-ID-Reader.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Iraqi-ID-Reader-Android-APK
+          path: flutter_ni_reader/Iraqi-ID-Reader.apk
+          if-no-files-found: error
+          retention-days: 30
