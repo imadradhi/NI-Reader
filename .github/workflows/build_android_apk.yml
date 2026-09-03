@@ -1,24 +1,32 @@
-name: Build Android APK
+name: Build Android APK - Iraqi ID Reader
 
 on:
   push:
     branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
-  build-android:
+  build-android-apk:
+    name: Build Flutter APK (Android)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      # ── 1. Checkout ────────────────────────────────────────────────
+      - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Setup Java 17
+      # ── 2. Java 17 ─────────────────────────────────────────────────
+      - name: Setup Java 17 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
+      # ── 3. Flutter SDK ─────────────────────────────────────────────
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
@@ -26,57 +34,96 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Initialize Android Project Structure
+      # ── 4. Print versions for logs ─────────────────────────────────
+      - name: Print Flutter and Dart Versions
+        run: |
+          flutter --version
+          dart --version
+
+      # ── 5. Create local.properties ─────────────────────────────────
+      #   settings.gradle asserts this file exists, so we create it here
+      - name: Create local.properties for Android build
         working-directory: ./flutter_ni_reader
         run: |
-          # Backup custom files
-          cp android/app/src/main/AndroidManifest.xml /tmp/CustomAndroidManifest.xml || true
-          cp android/app/src/main/res/xml/nfc_tech_filter.xml /tmp/CustomNfcTechFilter.xml || true
-          cp android/app/build.gradle /tmp/CustomAppBuildGradle.gradle || true
-          cp android/build.gradle /tmp/CustomRootBuildGradle.gradle || true
-          cp android/settings.gradle /tmp/CustomSettings.gradle || true
-          cp android/gradle.properties /tmp/CustomGradleProps.properties || true
-          cp android/app/src/main/kotlin/com/iraq/flutter_ni_reader/MainActivity.kt /tmp/CustomMainActivity.kt || true
-          cp android/app/src/main/res/values/styles.xml /tmp/CustomStyles.xml || true
+          FLUTTER_SDK_PATH=$(which flutter | xargs readlink -f | xargs dirname | xargs dirname)
+          echo "flutter.sdk=${FLUTTER_SDK_PATH}" > android/local.properties
+          echo "sdk.dir=${ANDROID_SDK_ROOT}" >> android/local.properties
+          echo "flutter.versionCode=1" >> android/local.properties
+          echo "flutter.versionName=1.0.0" >> android/local.properties
+          echo "=== local.properties ==="
+          cat android/local.properties
 
-          # Generate fresh Android project structure
-          flutter create . --platforms=android --org com.iraq
-
-          # Restore custom AndroidManifest.xml (NFC + Camera permissions)
-          cp /tmp/CustomAndroidManifest.xml android/app/src/main/AndroidManifest.xml
-
-          # Restore NFC tech filter
-          mkdir -p android/app/src/main/res/xml
-          cp /tmp/CustomNfcTechFilter.xml android/app/src/main/res/xml/nfc_tech_filter.xml
-
-          # Restore custom build.gradle files
-          cp /tmp/CustomAppBuildGradle.gradle android/app/build.gradle
-          cp /tmp/CustomRootBuildGradle.gradle android/build.gradle
-          cp /tmp/CustomSettings.gradle android/settings.gradle
-          cp /tmp/CustomGradleProps.properties android/gradle.properties
-
-          # Restore MainActivity.kt
-          mkdir -p android/app/src/main/kotlin/com/iraq/flutter_ni_reader
-          cp /tmp/CustomMainActivity.kt android/app/src/main/kotlin/com/iraq/flutter_ni_reader/MainActivity.kt
-
-          # Restore styles
-          mkdir -p android/app/src/main/res/values
-          cp /tmp/CustomStyles.xml android/app/src/main/res/values/styles.xml
-
+      # ── 6. Install Flutter packages ────────────────────────────────
       - name: Install Flutter Dependencies
         working-directory: ./flutter_ni_reader
         run: flutter pub get
 
-      - name: Build Android APK (Release - Debug Signed)
+      # ── 7. Dart analysis (non-fatal) ───────────────────────────────
+      - name: Analyze Dart Code
+        working-directory: ./flutter_ni_reader
+        run: flutter analyze --no-fatal-infos || true
+
+      # ── 8. Build APK ───────────────────────────────────────────────
+      - name: Build Android APK (Release)
         working-directory: ./flutter_ni_reader
         run: |
           flutter build apk --release --no-tree-shake-icons
-          mv build/app/outputs/flutter-apk/app-release.apk ../Iraqi-ID-Reader.apk
+          echo "=== Build output ==="
+          ls -lh build/app/outputs/flutter-apk/
 
-      - name: Upload APK Artifact
+      # ── 9. Stage APK with versioned name ───────────────────────────
+      - name: Rename and Stage APK for Upload
+        run: |
+          mkdir -p release-artifacts
+          BUILD_NUM=${{ github.run_number }}
+          APK_NAME="Iraqi-ID-Reader-v1.0.0-build${BUILD_NUM}.apk"
+          cp flutter_ni_reader/build/app/outputs/flutter-apk/app-release.apk \
+             "release-artifacts/${APK_NAME}"
+          echo "=== Artifact Info ==="
+          ls -lh release-artifacts/
+          sha256sum "release-artifacts/${APK_NAME}"
+
+      # ── 10. Upload to GitHub Artifacts ─────────────────────────────
+      - name: Upload APK Artifact to GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: Iraqi-ID-Reader-Android-APK
-          path: flutter_ni_reader/Iraqi-ID-Reader.apk
+          name: Iraqi-ID-Reader-APK-build${{ github.run_number }}
+          path: release-artifacts/
           if-no-files-found: error
           retention-days: 30
+
+      # ── 11. Workflow Build Summary ─────────────────────────────────
+      - name: Build Summary
+        if: always()
+        run: |
+          RUN_NUM=${{ github.run_number }}
+          REF_NAME=${{ github.ref_name }}
+          {
+            echo "## Iraqi ID Reader — Build Summary"
+            echo ""
+            echo "| Info | Value |"
+            echo "|---|---|"
+            echo "| App Version | v1.0.0 |"
+            echo "| Build Number | ${RUN_NUM} |"
+            echo "| Branch | ${REF_NAME} |"
+            echo "| Package ID | com.iraq.flutter_ni_reader |"
+            echo "| Flutter | 3.22.x stable |"
+            echo "| Java | 17 Temurin |"
+            echo "| Min SDK | 24 (Android 7.0 Nougat) |"
+            echo "| Target SDK | 34 (Android 14) |"
+            echo "| NFC Protocol | ICAO 9303 — PACE and BAC |"
+            echo "| Camera | CameraX + ML Kit OCR |"
+            echo ""
+            echo "### App Features"
+            echo "- **NFC Reading:** flutter_nfc_kit — ICAO 9303 PACE and BAC protocols"
+            echo "- **OCR for MRZ:** Google ML Kit — TD1 3-line parsing + Check Digit validation"
+            echo "- **Cross Verification:** MRZ vs NFC chip data cross-matching"
+            echo "- **Zero-Persistence:** No biometric data stored locally on device"
+            echo "- **REST API:** Send card data to desktop via USB Tethering + OkHttp"
+            echo "- **Security:** FLAG_SECURE screen protection + SecurityZeroizer memory wipe"
+            if [ -d "release-artifacts" ]; then
+              APK_SIZE=$(du -sh release-artifacts/*.apk 2>/dev/null | cut -f1)
+              echo ""
+              echo "| APK Size | ${APK_SIZE} |"
+            fi
+          } >> $GITHUB_STEP_SUMMARY
