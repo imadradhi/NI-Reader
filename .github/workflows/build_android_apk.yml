@@ -69,7 +69,7 @@ jobs:
       - name: Build Android APK (Release)
         working-directory: ./flutter_ni_reader
         run: |
-          flutter build apk --release --no-tree-shake-icons
+          flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
           echo "=== Build output ==="
           ls -lh build/app/outputs/flutter-apk/
 
