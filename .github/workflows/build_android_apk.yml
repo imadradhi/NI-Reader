@@ -42,7 +42,12 @@ jobs:
           flutter --version
           dart --version
 
-      # ── 5. Create local.properties ─────────────────────────────────
+      # ── 5. Accept Android SDK Licenses ─────────────────────────────
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
+      # ── 6. Create local.properties ─────────────────────────────────
       #   settings.gradle asserts this file exists, so we create it here
       - name: Create local.properties for Android build
         working-directory: ./flutter_ni_reader
@@ -55,7 +60,7 @@ jobs:
           echo "=== local.properties ==="
           cat android/local.properties
 
-      # ── 6. Install Flutter packages ────────────────────────────────
+      # ── 7. Install Flutter packages ────────────────────────────────
       - name: Install Flutter Dependencies
         working-directory: ./flutter_ni_reader
         run: flutter pub get
