@@ -1,72 +1,114 @@
-name: Build iOS IPA
+name: Build iOS IPA - Iraqi ID Reader
 
 on:
   push:
     branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-ios-ipa:
+    name: Build Flutter IPA (iOS)
     runs-on: macos-14
-    
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
 
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # ── 2. Flutter SDK (stable, same as Android workflow) ──────────
+      # NOTE: Using stable channel to avoid intl version conflicts.
+      # flutter_localizations pins intl to a specific version per SDK;
+      # pubspec.yaml uses 'intl: any' to accept whichever version that is.
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x'
           channel: 'stable'
           cache: true
 
-      - name: Initialize & Configure iOS Project Structure
-        working-directory: ./flutter_ni_reader
+      # ── 3. Print versions for logs ─────────────────────────────────
+      - name: Print Flutter and Dart Versions
         run: |
-          # Backup custom Info.plist, Entitlements, AppDelegate and Podfile
-          cp ios/Runner/Info.plist /tmp/CustomInfo.plist || true
-          cp ios/Runner/Runner.entitlements /tmp/CustomRunner.entitlements || true
-          cp ios/Runner/AppDelegate.swift /tmp/CustomAppDelegate.swift || true
-          cp ios/Podfile /tmp/CustomPodfile || true
-          
-          # Generate standard Xcode project scaffolding
-          flutter create . --platforms=ios --org com.iraq
-          
-          # Restore custom Info.plist with NFC & Camera permissions
-          cp /tmp/CustomInfo.plist ios/Runner/Info.plist
-          
-          # Restore Runner.entitlements with CoreNFC capabilities
-          cp /tmp/CustomRunner.entitlements ios/Runner/Runner.entitlements
-          
-          # Restore consolidated AppDelegate.swift with Native CoreNFC Bridge
-          cp /tmp/CustomAppDelegate.swift ios/Runner/AppDelegate.swift
-          
-          # Restore Podfile with iOS 15.0 deployment target
-          cp /tmp/CustomPodfile ios/Podfile
-          
-          # Inject CODE_SIGN_ENTITLEMENTS into Xcode project to enable CoreNFC capabilities
-          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.iraq.flutterNiReader;/PRODUCT_BUNDLE_IDENTIFIER = com.iraq.flutterNiReader;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = "Runner\/Runner.entitlements";/g' ios/Runner.xcodeproj/project.pbxproj || true
+          flutter --version
+          dart --version
 
-      - name: Install Dependencies
+      # ── 4. Install Flutter packages ────────────────────────────────
+      - name: Install Flutter Dependencies
         working-directory: ./flutter_ni_reader
+        run: flutter pub get
+
+      # ── 5. Install CocoaPods dependencies ──────────────────────────
+      - name: Install CocoaPods
+        working-directory: ./flutter_ni_reader/ios
         run: |
-          flutter pub get
-          cd ios
           pod install --repo-update || pod install
 
-      - name: Build iOS Application (Unsigned IPA)
+      # ── 6. Build iOS app (unsigned, for distribution/testing) ──────
+      - name: Build iOS Application (Unsigned)
         working-directory: ./flutter_ni_reader
         run: |
           flutter build ios --release --no-codesign
+          echo "=== Build output ==="
+          ls -lh build/ios/iphoneos/ || true
+
+      # ── 7. Package as IPA ──────────────────────────────────────────
+      - name: Package as IPA
+        working-directory: ./flutter_ni_reader
+        run: |
+          BUILD_NUM=${{ github.run_number }}
           cd build/ios/iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/
-          zip -r Iraqi-ID-Reader.ipa Payload
-          mv Iraqi-ID-Reader.ipa ../../../
+          zip -r "Iraqi-ID-Reader-iOS-v1.0.0-build${BUILD_NUM}.ipa" Payload
+          ls -lh "Iraqi-ID-Reader-iOS-v1.0.0-build${BUILD_NUM}.ipa"
 
-      - name: Upload IPA Artifact
+      # ── 8. Stage IPA ───────────────────────────────────────────────
+      - name: Stage IPA for Upload
+        run: |
+          mkdir -p release-artifacts
+          BUILD_NUM=${{ github.run_number }}
+          cp "flutter_ni_reader/build/ios/iphoneos/Iraqi-ID-Reader-iOS-v1.0.0-build${BUILD_NUM}.ipa" \
+             "release-artifacts/Iraqi-ID-Reader-iOS-v1.0.0-build${BUILD_NUM}.ipa"
+          ls -lh release-artifacts/
+
+      # ── 9. Upload to GitHub Artifacts ─────────────────────────────
+      - name: Upload IPA Artifact to GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: Iraqi-ID-Reader-iOS-IPA
-          path: flutter_ni_reader/Iraqi-ID-Reader.ipa
+          name: Iraqi-ID-Reader-iOS-IPA-build${{ github.run_number }}
+          path: release-artifacts/
           if-no-files-found: error
+          retention-days: 30
+
+      # ── 10. Build Summary ─────────────────────────────────────────
+      - name: Build Summary
+        if: always()
+        run: |
+          RUN_NUM=${{ github.run_number }}
+          REF_NAME=${{ github.ref_name }}
+          FLUTTER_VER=$(flutter --version 2>/dev/null | head -1 | awk '{print $2}')
+          {
+            echo "## Iraqi ID Reader iOS - Build Summary"
+            echo ""
+            echo "| Info | Value |"
+            echo "|---|---|"
+            echo "| App Version | v1.0.0 |"
+            echo "| Build Number | ${RUN_NUM} |"
+            echo "| Branch | ${REF_NAME} |"
+            echo "| Bundle ID | com.iraq.flutterNiReader |"
+            echo "| Flutter | ${FLUTTER_VER} stable |"
+            echo "| Platform | iOS (macOS 14 runner) |"
+            echo "| Min iOS | 15.0 |"
+            echo "| NFC Protocol | CoreNFC - ICAO 9303 |"
+            echo "| Signing | Unsigned (development use) |"
+            echo ""
+            echo "### App Features"
+            echo "- **NFC Reading:** CoreNFC + flutter_nfc_kit - ICAO 9303 PACE and BAC"
+            echo "- **OCR for MRZ:** Google ML Kit - TD1 3-line parsing"
+            echo "- **Cross Verification:** MRZ vs NFC chip cross-matching"
+            echo "- **Zero-Persistence:** No biometric data stored locally"
+            echo "- **REST API:** Send card data to desktop via WiFi"
+          } >> $GITHUB_STEP_SUMMARY
